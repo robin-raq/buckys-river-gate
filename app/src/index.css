@@ -1,4 +1,8 @@
 @import './styles/tokens.css';
+@import './styles/bucky.css';
+@import './styles/river-scene.css';
+@import './styles/animations.css';
+@import './styles/overlays.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -9,8 +13,30 @@ body {
   background: var(--bg-deep);
   color: var(--ui-text);
   margin: 0;
-  font-family: system-ui, sans-serif;
+  font-family: 'Nunito', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+.goal-sidebar {
+  width: 120px;
+  flex-shrink: 0;
+  padding: 0.75rem 0.5rem;
+  font-size: 0.75rem;
+  border-left: 1px solid var(--grid-line);
+}
+
+.goal-sidebar__heading {
+  margin: 0;
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+
+.goal-sidebar__label {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ref-gate);
 }
 
 /* Prevent iOS callout and text selection on log elements */
@@ -28,4 +54,21 @@ body {
   position: absolute;
   pointer-events: none;
   z-index: 50;
+}
+
+.river-row {
+  background: rgba(26, 58, 92, 0.85);
+  border: 1px solid var(--grid-line);
+}
+
+.river-scene {
+  min-height: 280px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bucky-avatar,
+  .reference-gate--pulse,
+  .equivalence-badge-slam {
+    animation: none !important;
+  }
 }
