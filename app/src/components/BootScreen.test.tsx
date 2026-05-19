@@ -1,7 +1,19 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeAll } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BootScreen } from './BootScreen'
+
+// jsdom has no Web Audio API — stub AudioContext so unlockAudio() doesn't throw
+beforeAll(() => {
+  const mockCompressor = { connect: vi.fn() }
+  const mockCtx = {
+    state:                    'running' as AudioContextState,
+    destination:              {} as AudioDestinationNode,
+    resume:                   vi.fn().mockResolvedValue(undefined),
+    createDynamicsCompressor: vi.fn(() => mockCompressor),
+  }
+  vi.stubGlobal('AudioContext', vi.fn(function() { return mockCtx }))
+})
 
 describe('BootScreen', () => {
   it('renders the game title in a heading', () => {

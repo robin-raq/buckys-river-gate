@@ -1,8 +1,14 @@
+import { unlockAudio } from '../audio/toneEngine'
+
 interface BootScreenProps {
   onStart: () => void
 }
 
 export function BootScreen({ onStart }: BootScreenProps) {
+  function handleStart() {
+    unlockAudio()   // must be inside user-gesture handler for iOS Safari
+    onStart()
+  }
   return (
     <div
       style={{
@@ -24,7 +30,7 @@ export function BootScreen({ onStart }: BootScreenProps) {
         Help Bucky fix the dam!
       </p>
       <button
-        onClick={onStart}
+        onClick={handleStart}
         style={{
           padding:       '1rem 3rem',
           fontSize:      '1.4rem',

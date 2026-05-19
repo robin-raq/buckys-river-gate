@@ -1,13 +1,22 @@
 import { useEffect, useRef, type Dispatch } from 'react'
 import type { LessonState } from '../state/types'
 import type { LessonEvent } from '../state/lessonEvents'
-import { getNode }          from '../state/dialogue'
-import { SpeechBubble }     from './SpeechBubble'
-import { ReferenceGate }    from './ReferenceGate'
-import { CheckButton }      from './CheckButton'
-import { ChallengeCounter } from './ChallengeCounter'
-import { Log }              from './Log'
-import { RIVER_WIDTH_PX }   from '../constants'
+import { getNode }              from '../state/dialogue'
+import { SpeechBubble }         from './SpeechBubble'
+import { ReferenceGate }        from './ReferenceGate'
+import { CheckButton }          from './CheckButton'
+import { ChallengeCounter }     from './ChallengeCounter'
+import { Log }                  from './Log'
+import { RIVER_WIDTH_PX }       from '../constants'
+import {
+  playSnapSound,
+  playFractionTone,
+  playCheckCorrectSound,
+  playCheckTooShortSound,
+  playCheckTooLongSound,
+  playWinFanfare,
+  unlockAudio,
+} from '../audio/toneEngine'
 
 interface Props {
   state:    LessonState
@@ -53,6 +62,26 @@ export function LessonScreen({ state, dispatch }: Props) {
     )
     return () => { if (exploreTimer.current) clearTimeout(exploreTimer.current) }
   }, [state.phase, dispatch])
+
+  // ── Phase-transition sounds ──────────────────────────────────────────────
+  // Runs whenever the phase changes. AudioContext was unlocked on Start,
+  // so these fire without needing a new user gesture.
+  useEffect(() => {
+    switch (state.phase) {
+      case 'INSTRUCT_SUCCESS':
+      case 'CHECK_SUCCESS':
+        playCheckCorrectSound()
+        break
+      case 'CHECK_ERROR_1':
+        // Distinguish short vs long by errorType (passed through reducer state)
+        if (state.errorType === 'too_short') playCheckTooShortSound()
+        else                                 playCheckTooLongSound()
+        break
+      case 'WIN':
+        playWinFanfare()
+        break
+    }
+  }, [state.phase]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Dialogue advance ─────────────────────────────────────────────────────
   function advance() { dispatch({ type: 'DIALOGUE_ADVANCE' }) }
@@ -342,7 +371,12 @@ export function LessonScreen({ state, dispatch }: Props) {
         {dockBlocks.map(b => (
           <button
             key={b.id}
-            onClick={() => dispatch({ type: 'LOG_SNAPPED', blockId: b.id, slot: state.buildZoneLogs.length })}
+            onClick={() => {
+              unlockAudio()   // belt-and-suspenders for iOS mid-session resume
+              playSnapSound()
+              playFractionTone({ numerator: b.numerator, denominator: b.denominator })
+              dispatch({ type: 'LOG_SNAPPED', blockId: b.id, slot: state.buildZoneLogs.length })
+            }}
             style={{
               background: 'none', border: 'none', padding: 0,
               cursor: 'pointer', flexShrink: 0,
