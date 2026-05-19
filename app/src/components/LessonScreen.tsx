@@ -202,6 +202,26 @@ export function LessonScreen({ state, dispatch }: Props) {
       <TopBar
         trailing={
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
+            {state.chopCount > 0 && state.phase !== 'WIN' && (
+              <span
+                data-testid="chops-counter"
+                style={{
+                  display:        'flex',
+                  alignItems:     'center',
+                  gap:            '0.3rem',
+                  fontSize:       '0.85rem',
+                  fontWeight:     700,
+                  color:          'var(--log-half, #A0784F)',
+                  background:     'rgba(160,120,79,0.12)',
+                  borderRadius:   '1rem',
+                  padding:        '0.2rem 0.6rem',
+                  border:         '1px solid rgba(160,120,79,0.3)',
+                }}
+                aria-label={`${state.chopCount} chop${state.chopCount !== 1 ? 's' : ''}`}
+              >
+                🪓 {state.chopCount}
+              </span>
+            )}
             <PhaseDots activePhase={lessonPhase} />
             {isCheckPhase && (
               <ChallengeCounter current={state.challengeIndex + 1} total={3} />
@@ -386,7 +406,7 @@ export function LessonScreen({ state, dispatch }: Props) {
           userSelect: 'none',
           filter:     'drop-shadow(0 4px 16px rgba(0,0,0,0.6))',
         }}>
-          <BuckyAvatar buckyState={node.buckyState} size={140} />
+          <BuckyAvatar buckyState={node.buckyState} size={180} />
         </div>
 
         {/* Next button — large green circle, right side */}

@@ -223,8 +223,11 @@ export function lessonReducer(state: LessonState, event: LessonEvent): LessonSta
           }
         }
 
-        case 'CHOP':
-          return { ...state, blocks: splitBlock(state.blocks, event.blockId) }
+        case 'CHOP': {
+          const newBlocks = splitBlock(state.blocks, event.blockId)
+          const didChop   = newBlocks !== state.blocks
+          return { ...state, blocks: newBlocks, chopCount: didChop ? state.chopCount + 1 : state.chopCount }
+        }
 
         case 'LOG_SNAPPED':
           return { ...state, blocks: snapBlock(state.blocks, event.blockId, event.slot) }
@@ -275,8 +278,11 @@ export function lessonReducer(state: LessonState, event: LessonEvent): LessonSta
             buildZoneLogs: state.buildZoneLogs.filter(id => id !== event.blockId),
           }
 
-        case 'CHOP':
-          return { ...state, blocks: splitBlock(state.blocks, event.blockId) }
+        case 'CHOP': {
+          const newBlocks = splitBlock(state.blocks, event.blockId)
+          const didChop   = newBlocks !== state.blocks
+          return { ...state, blocks: newBlocks, chopCount: didChop ? state.chopCount + 1 : state.chopCount }
+        }
 
         case 'CHECK_SUBMIT': {
           const placed = placedFractions(state)
@@ -406,8 +412,11 @@ export function lessonReducer(state: LessonState, event: LessonEvent): LessonSta
             buildZoneLogs: state.buildZoneLogs.filter(id => id !== event.blockId),
           }
 
-        case 'CHOP':
-          return { ...state, blocks: splitBlock(state.blocks, event.blockId) }
+        case 'CHOP': {
+          const newBlocks = splitBlock(state.blocks, event.blockId)
+          const didChop   = newBlocks !== state.blocks
+          return { ...state, blocks: newBlocks, chopCount: didChop ? state.chopCount + 1 : state.chopCount }
+        }
 
         case 'CHECK_SUBMIT': {
           const placed    = placedFractions(state)

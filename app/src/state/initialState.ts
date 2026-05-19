@@ -48,6 +48,7 @@ export function initLessonState(): LessonState {
     exploreStartTime:    0,
     audioUnlocked:       false,
     errorType:           null,
+    chopCount:           0,
     log:                 [],
   }
 }

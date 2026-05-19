@@ -53,6 +53,7 @@ export interface LessonState {
   exploreStartTime:    number
   audioUnlocked:       boolean
   errorType:           ErrorType
+  chopCount:           number     // total successful student chops (for display + analytics)
   log:                 LogEntry[]
 }
 

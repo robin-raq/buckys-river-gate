@@ -223,6 +223,24 @@ describe('EXPLORE phase', () => {
     expect(afterChop.blocks.length).toBe(explore.blocks.length)
   })
 
+  it('CHOP on splittable block → increments chopCount', () => {
+    expect(explore.chopCount).toBe(0)
+    const splittable = explore.blocks.find(b => b.splittable)!
+    const s = dispatch(explore, { type: 'CHOP', blockId: splittable.id })
+    expect(s.chopCount).toBe(1)
+  })
+
+  it('chopCount accumulates across multiple chops', () => {
+    const splittable = explore.blocks.find(b => b.splittable)!
+    let s = dispatch(explore, { type: 'CHOP', blockId: splittable.id })
+    // After chop, we have two 1/2 halves — chop one of those
+    const nextSplittable = s.blocks.find(b => b.splittable)
+    if (nextSplittable) {
+      s = dispatch(s, { type: 'CHOP', blockId: nextSplittable.id })
+      expect(s.chopCount).toBe(2)
+    }
+  })
+
   it('LOG_SNAPPED moves block to build zone', () => {
     const block = explore.blocks[0]
     const s = dispatch(explore, { type: 'LOG_SNAPPED', blockId: block.id, slot: 0 })
