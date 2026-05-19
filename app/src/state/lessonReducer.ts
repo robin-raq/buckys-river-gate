@@ -52,13 +52,6 @@ function returnBlock(blocks: BlockState[], blockId: string): BlockState[] {
   )
 }
 
-function blocksInBuildZone(state: LessonState): BlockState[] {
-  return state.blocks.filter(b => b.buildZoneLogs
-    ? state.buildZoneLogs.includes(b.id)
-    : b.zone === 'build'
-  )
-}
-
 function placedFractions(state: LessonState): FractionValue[] {
   return state.buildZoneLogs
     .map(id => state.blocks.find(b => b.id === id))

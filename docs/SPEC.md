@@ -1,8 +1,8 @@
 # Bucky's River Gate — Technical Specification
 ## Clone Synthesis Tutor · WK04-CST
 
-**Version:** 1.0
-**Date:** 2026-05-18
+**Version:** 1.1 (mockup reconciliation)
+**Date:** 2026-05-19
 **Companion doc:** [`docs/GDD.md`](GDD.md) — design intent, dialogue script, audio design
 **This doc covers:** component tree, module map, FSM transition table, function contracts, CSS architecture, package dependencies, error boundary contract, test structure
 
@@ -72,16 +72,20 @@ bucky-river-gate/
     │   │
     │   ├── RiverGrid/
     │   │   ├── RiverGrid.tsx     — River canvas container; owns drag context
+    │   │   ├── RiverScene.tsx    — Layered CSS/SVG background (sky, river, dock, lanterns)
     │   │   ├── ReferenceGate.tsx — Glowing blue target bar
-    │   │   ├── BuildZone.tsx     — Row 1 drop target area
-    │   │   └── SnapGuides.tsx    — 240px column guide lines (faint dashed)
+    │   │   ├── BuildZone.tsx     — Row 1 drop target area + slot labels 1–4
+    │   │   ├── SnapGuides.tsx    — 240px column guide lines (faint dashed)
+    │   │   └── GoalSidebar.tsx   — 120px GOAL rail (INSTRUCT + CHECK only)
     │   │
     │   ├── ToolTray/
     │   │   ├── ToolTray.tsx      — Bottom tray layout
     │   │   ├── LogDock.tsx       — Available log inventory
     │   │   └── CheckButton.tsx   — CHECK / Submit button + disabled state
     │   │
-    │   ├── Log.tsx               — Single draggable/tappable log block (used in dock + build zone)
+    │   ├── Log.tsx               — Cylindrical log (CSS pill + grain); chop states + BONK overlay
+    │   ├── ChopProgressRing.tsx  — 500ms hold ring on long-press (see CHOP_STORYBOARD.md)
+    │   ├── BonkFeedback.tsx      — "BONK!" + ✕ badge for blocked 1/4 chop
     │   │
     │   └── overlays/
     │       ├── GhostOverlay.tsx  — Transparent 1/2 log drawn over gate on CHECK_ERROR_2

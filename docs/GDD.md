@@ -1,8 +1,8 @@
 # Bucky's River Gate — Game Design Document
 ## Clone Synthesis Tutor · WK04-CST · Superbuilders Gauntlet
 
-**Version:** 2.0 (merged canonical spec)
-**Date:** 2026-05-18
+**Version:** 2.1 (mockup reconciliation)
+**Date:** 2026-05-19
 **Product name:** Bucky's River Gate
 **Platform:** iPad Safari (web-based, static bundle — no server)
 **Target learner:** 9-year-olds (Grade 3–4); no prior fraction notation required
@@ -37,28 +37,75 @@ In 4/4 time, one whole note = 2 half notes = 4 quarter notes. Research by Courey
 
 ## Part 2 — Visual Design System
 
+### 2.0 Mockup Reconciliation & Art Direction (2026-05-19)
+
+**Source:** `docs/visual-mockups/` (PNG storyboards + `index.html` interactive previews). See also [`CHOP_STORYBOARD.md`](visual-mockups/CHOP_STORYBOARD.md).
+
+#### Decision: CSS/SVG approximation for prototype week
+
+The mockups assume illustrated character art and a painted river scene. **We are not commissioning assets this week.** The demo proves **interaction and pedagogy**, not illustration fidelity.
+
+| Layer | Mockup shows | Prototype approach |
+|---|---|---|
+| River scene | Illustrated night river, dock planks, lanterns, trees | Layered CSS gradients + inline SVG silhouettes (no image files) |
+| Logs | Cylindrical 3D logs with rounded ends, wood grain | CSS pill shape + inset shadows + grain gradient (see §2.4) |
+| Bucky | Illustrated beaver sprites (8 states) | Emoji + CSS bounce for week 1; sprite sheet is post-demo |
+| Chop | 6-frame storyboard with motion blur | CSS keyframes per [`CHOP_STORYBOARD.md`](visual-mockups/CHOP_STORYBOARD.md) |
+
+#### Conflicts resolved (ignore mockup drift)
+
+| Mockup element | Resolution |
+|---|---|
+| Title "SPLIT IT! Fractions with Bucky" on chop-longpress screen | **Ignore.** Canonical product name is **Bucky's River Gate**. |
+| WIN screen buttons "FRACTION GUIDE" / "BUCKY'S FACTS" | **Out of scope** for prototype. WIN shows celebration + "Play Again" only. |
+| EXPLORE dock shows 4 logs (1 whole, 1/2, 1/4, 1/4) | **Adopt.** Simpler than the old 14-log inventory; less overwhelming for first-time players. |
+| Larger inventories in older GDD tables | **Superseded** by mockup-aligned counts in §3.3. |
+
+#### What the mockups add beyond the original GDD
+
+- **Illustrated environment** — not a flat `--bg-deep` div; needs a convincing river backdrop (§2.2).
+- **Cylindrical logs** — not `border-radius: 12px` rectangles (§2.4).
+- **6-frame chop spec** — IDLE → HOLD (progress ring) → READY (dashed cut) → SWING → SPLIT → DONE (storyboard doc).
+- **Blocked chop feedback** — "BONK!" label + ✕ badge, not wiggle-only (§2.4).
+- **GOAL sidebar** — persistent target reminder during INSTRUCT and CHECK (§2.7).
+- **Slot labels 1–4** — visible on the build-zone grid when logs are placed (§2.8).
+
+---
+
 ### 2.1 Global Layout (iPad Safari, 1024×768 viewport)
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  TOP BAR (64px)                                                  │
-│  [Bucky avatar 80×80]  [Speech bubble — 580px wide]            │
-│  [Phase dots: ● EXPLORE  ○ INSTRUCT  ○ CHECK]                  │
-├─────────────────────────────────────────────────────────────────┤
-│  RIVER GRID CANVAS (1024 × 480px)                               │
-│  ┌────────────────────────────────────────────────────────┐    │
-│  │  REFERENCE GATE ROW (hidden in EXPLORE)                │    │
-│  │  ══════════════════════════ (glowing blue target)      │    │
-│  │  ACTIVE BUILD ZONE (Row 1 — single log row, 80px tall) │    │
-│  │  ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ (240px snap grid lines)      │    │
-│  └────────────────────────────────────────────────────────┘    │
-├─────────────────────────────────────────────────────────────────┤
-│  TOOL TRAY (224px)                                               │
-│  [Log Palette — dock]   [Chop mode]   [CHECK / Submit button]  │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│  TOP BAR (64px)                                                           │
+│  [Bucky 80×80]  [Speech bubble 580px]   [Phase dots ● EXPLORE ○ … ○]    │
+├────────────────────────────────────────────────────────┬─────────────────┤
+│  RIVER GRID CANVAS (~880 × 480px)                      │ GOAL SIDEBAR    │
+│  ┌──────────────────────────────────────────────────┐  │ (120px,         │
+│  │  Scene: night sky · river · dock · lanterns      │  │  INSTRUCT+CHECK)│
+│  │  REFERENCE GATE ROW (hidden in EXPLORE)            │  │                 │
+│  │  ═══════════════ (glowing blue target)           │  │  "GOAL"         │
+│  │  BUILD ZONE — 4 slots, labels 1–4                │  │  [gate preview] │
+│  │  ─ ─ ─ ─ ─ ─ ─ ─ (240px snap guides)           │  │  ← 1/2 →        │
+│  └──────────────────────────────────────────────────┘  │                 │
+├────────────────────────────────────────────────────────┴─────────────────┤
+│  TOOL TRAY (224px) — [Log dock]  [Chop affordance]  [CHECK / Submit]   │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 2.2 Color Palette — "Deep River" Dark Mode
+### 2.2 River Scene Background (CSS/SVG approximation)
+
+The canvas is not a solid `--river-water` fill. Stack these layers back-to-front:
+
+1. **Night sky** — `linear-gradient(180deg, #0a1628 0%, #1a2f4a 55%, #1e3a5f 100%)`
+2. **Stars** — 12–20 `1px` white dots via `box-shadow` on a pseudo-element (fixed positions, no animation required)
+3. **Tree silhouettes** — inline SVG `<path>` left/right edges, `#0f1a12` at 40% opacity
+4. **River water** — second gradient band with slow horizontal `background-position` shimmer (optional, 8s loop)
+5. **Dock planks** — bottom 48px: `repeating-linear-gradient(90deg, #5c4033 0 24px, #4a3328 24px 48px)` + top edge highlight
+6. **Lanterns** — 2× `radial-gradient` warm glows (`#fbbf24` at 15% opacity) flanking the build zone
+
+All layers use `pointer-events: none`. Interactive logs and gates sit above z-index 10.
+
+### 2.3 Color Palette — "Deep River" Dark Mode
 
 | Token | Hex | Usage |
 |---|---|---|
@@ -77,9 +124,30 @@ In 4/4 time, one whole note = 2 half notes = 4 quarter notes. Research by Courey
 | `--bucky-text` | `#1C1917` | Bucky dialogue text |
 | `--ui-text` | `#E2E8F0` | Phase indicators, labels |
 
-### 2.3 Log Visual Specifications
+### 2.4 Log Visual Specifications
 
-Every log is a rounded rectangle (`border-radius: 12px`) with a subtle horizontal grain stripe via CSS `repeating-linear-gradient`. Width is derived from fraction value against the active river width.
+Logs read as **short cylinders viewed from the side** — rounded end caps, vertical shading, horizontal grain. Implemented in CSS (no PNG assets):
+
+```css
+.log-cylinder {
+  height: 80px;
+  border-radius: 40px / 14px;           /* pill ends — reads as 3D log, not flat box */
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 6px,
+      rgba(107, 63, 31, 0.25) 6px 7px
+    ),
+    linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 40%, rgba(0,0,0,0.18) 100%),
+    var(--log-fill);                     /* --log-whole | --log-half | --log-quarter */
+  box-shadow:
+    inset 0 2px 4px rgba(255,255,255,0.15),
+    inset 0 -3px 6px rgba(0,0,0,0.25),
+    0 4px 8px rgba(0,0,0,0.35);
+}
+```
+
+Width is derived from fraction value against the active river width.
 
 ```typescript
 RIVER_WIDTH_PX = 960     // 1024px viewport – 2×32px padding
@@ -97,17 +165,19 @@ logPixelWidth(n, d) = Math.round((n / d) * RIVER_WIDTH_PX)
 |---|---|
 | `idle` | Standard color, wood-grain texture |
 | `touch-active` | `translateY(-6px)`, brighter tint, stronger drop shadow |
-| `chop-ready` (long-press held) | Amber pulse, dotted cut-line animates across center |
+| `chop-ready` (long-press held) | Amber pulse; **hold progress ring** 0→100% over 500ms (mockup shows ~40% mid-hold); dashed saw-cut line at center when ready |
 | `selected` | Gold pulsing outline `2px solid #FBBF24` |
 | `locked` | Desaturated, 40% opacity, non-interactive |
 | `snapped-to-slot` | Scale bounce `1.0 → 1.08 → 1.0` over 200ms |
-| `cant-chop` (1/4 log long-press) | CSS wiggle — `translateX` ±3px, 4 cycles |
+| `cant-chop` (1/4 log long-press) | Wiggle ±3° × 3 **plus** floating **"BONK!"** label (Fredoka 700, amber) and red **✕** badge on log center; 120Hz bonk audio |
 
 **Log drag:** Implemented via `touchstart / touchmove / touchend` — NOT the HTML5 Drag and Drop API (unsupported on iOS Safari). Set `touch-action: none` on the canvas. Use `position: absolute` for dragged elements — `position: fixed` causes iOS viewport jump during drag. Reparent the dragged element to the canvas root during drag so `absolute` positioning is relative to the canvas, not the dock flexbox.
 
 **Snap behavior:** When a dragged log releases within 40px of a valid slot, it snaps via CSS `transition: transform 150ms ease-out`. Snap grid = 240px columns.
 
-### 2.4 Bucky's Avatar
+**Chop animation:** Full 6-frame sequence documented in [`CHOP_STORYBOARD.md`](visual-mockups/CHOP_STORYBOARD.md): IDLE → HOLD (500ms + progress ring) → READY (dashed cut, axe icon) → SWING (120ms, Bucky `chop-swing`, optional motion-blur on log) → SPLIT (200ms, chip burst) → DONE (300ms, green seam glow). Total active animation ~1120ms excluding hold wait.
+
+### 2.5 Bucky's Avatar
 
 Bucky is a warm beaver in the top-left of each screen, 80×80px with a slow idle bounce. He has 8 sprite states:
 
@@ -124,7 +194,7 @@ Bucky is a warm beaver in the top-left of each screen, 80×80px with a slow idle
 
 Speech bubbles appear above Bucky. Text renders at **28ms/character** (typewriter). Bubble: 580px wide, auto height, max 3 lines, `--bucky-bubble` background.
 
-### 2.5 Reference Gate
+### 2.6 Reference Gate
 
 ```css
 .reference-gate {
@@ -138,6 +208,21 @@ Speech bubbles appear above Bucky. Text renders at **28ms/character** (typewrite
 
 - **INSTRUCT:** label `← 1/2 →` centered, 18px bold, `--ref-gate` color
 - **CHECK:** label `← ? →` until solved — target is unknown to student
+
+### 2.7 GOAL Sidebar (INSTRUCT + CHECK only)
+
+A **120px right rail** persists on all post-EXPLORE screens. It mirrors the Reference Gate so the target never scrolls out of mind.
+
+| Element | Spec |
+|---|---|
+| Header | "GOAL" — 11px uppercase, `--ui-text` at 70% opacity |
+| Preview bar | Miniature gate at correct fractional width (max 96px wide), same blue glow as main gate |
+| Label | `← 1/2 →` in INSTRUCT; `← ? →` in CHECK until solved |
+| EXPLORE | Hidden — no goal yet during sandbox |
+
+### 2.8 Build Zone Slot Labels
+
+Four snap columns align to 4/4 time. When any log occupies a slot, show a **slot number** (1–4) beneath the column in 12px muted text (`--grid-line` color). Numbers help teachers and students refer to positions during chop-complete and instruct moments (visible in `bucky-chop-complete.png` mockup).
 
 ---
 
@@ -235,7 +320,9 @@ interface LogEntry {
 | Property | EXPLORE | INSTRUCT_BUILD | CHECK_ACTIVE |
 |---|---|---|---|
 | Reference Gate | Hidden | Visible — 480px, `← 1/2 →` | Visible — new target, `← ? →` |
-| Log dock | 2× whole, 4× half, 8× quarter | 4× quarter only, others locked | 1× half, 4× quarter, 2× whole |
+| GOAL sidebar | Hidden | Visible — mirrors gate | Visible — mirrors gate |
+| Log dock | **1× whole, 1× half, 2× quarter** (4 logs) | 4× quarter only, others locked | Per-challenge inventory (§4) |
+| Slot labels 1–4 | Shown when logs placed | Shown | Shown |
 | Chop enabled | Yes | Yes | Yes |
 | Build (fuse) enabled | Yes | No | Yes |
 | CHECK / Submit button | Hidden | `CHECK` visible | `Submit` visible |

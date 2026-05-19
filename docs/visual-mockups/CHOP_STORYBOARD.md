@@ -11,7 +11,7 @@
 | Frame | Name | Duration | Visual | Audio | Bucky |
 |-------|------|----------|--------|-------|-------|
 | 1 | **IDLE** | — | Half log in build zone or dock; normal wood state | — | `idle` |
-| 2 | **HOLD** | 500ms | Amber outline pulse; hold progress bar 0→100%; finger ghost optional | Rising tone 300→600 Hz sine sweep | `thinking` |
+| 2 | **HOLD** | 500ms | Amber outline pulse; **circular progress ring** 0→100% (mockup shows ~40% mid-hold); finger ghost optional | Rising tone 300→600 Hz sine sweep | `thinking` |
 | 3 | **READY** | until tap | Dashed saw-cut line at log center; axe icon bobs above; `splittable-hint` class | Sustain quiet hum | `chopping` (axe raised) |
 | 4 | **SWING** | 120ms | Bucky sprite `chopping` — axe mid-swing; log scaleX squeeze 1.0→0.95 | Sharp crack 600Hz, 80ms | `chopping` |
 | 5 | **SPLIT** | 200ms | Log divides; two children translate apart 8px then snap flush; 4–8 wood chips burst | Crack + two quarter tones staggered 50ms | `excited` |
@@ -39,8 +39,8 @@ Same frame names; differences:
 
 | Frame | Duration | Visual | Audio |
 |-------|----------|--------|-------|
-| HOLD attempt | 300ms | Log `wiggle` ±3° × 3; red lock icon | 120Hz bonk, 200ms |
-| DONE | — | No split; bubble: smallest piece | — |
+| HOLD attempt | 300ms | Log `wiggle` ±3° × 3; floating **"BONK!"** text + red **✕** badge (not wiggle-only) | 120Hz bonk, 200ms |
+| DONE | — | No split; Bucky explains smallest piece | — |
 
 ---
 
@@ -73,7 +73,8 @@ replaceBlock(blockId, childBlocks) // rational split: 1/2 → 2×1/4, 1/1 → 2�
 - [ ] Bucky sprite: `chopping` (axe raised), `excited` (post-split)
 - [ ] Wood chip particles (6×6px brown squares, 4–8 per chop)
 - [ ] Saw-cut dashed line overlay (SVG or CSS border)
-- [ ] Hold progress bar (6px, amber gradient)
+- [ ] Hold progress ring (SVG circle or conic-gradient, amber; 0→100% over 500ms)
+- [ ] BonkFeedback overlay ("BONK!" + ✕ badge)
 - [ ] Optional: `bucky-chop-storyboard.png` contact sheet in repo
 
 ---

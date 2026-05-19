@@ -1,5 +1,7 @@
 # Bucky's River Gate — Game Design Document & Lesson Plan
 
+> **Canonical spec (mockup-aligned):** See [`docs/GDD.md`](docs/GDD.md) v2.1 (2026-05-19) for art direction, GOAL sidebar, simplified EXPLORE dock, cylindrical logs, and chop storyboard. This file retains the full lesson-plan narrative; visual/interaction details below may lag the canonical doc.
+
 **Product:** Bucky's River Gate
 **Platform:** iPad Safari (web-based, single HTML file)
 **Target Learner:** 9-year-olds (Grade 3–4); no prior fraction notation required
@@ -71,7 +73,7 @@ In 4/4 time, one whole note = 2 half notes = 4 quarter notes. The Academic Music
 
 ### 2.3 Log Visual Specifications
 
-Every log is a rounded-rectangle (`border-radius: 12px`) with a subtle horizontal grain stripe rendered via CSS `repeating-linear-gradient`. Width is computed as a percentage of the River Grid's total width (1024px usable area minus 2×32px padding = 960px active width).
+Logs are **CSS cylindrical approximations** (pill-shaped ends, inset shading, horizontal grain) — not flat `border-radius: 12px` boxes. See `docs/GDD.md` §2.4 for the full `.log-cylinder` recipe. Width is computed as a percentage of the River Grid's total width (1024px usable area minus 2×32px padding = 960px active width).
 
 | Log Type | Fraction | Active Width | Height | Snap Unit | Note Label |
 |----------|----------|-------------|--------|-----------|------------|
@@ -81,7 +83,7 @@ Every log is a rounded-rectangle (`border-radius: 12px`) with a subtle horizonta
 
 **Snap Behavior:** During drag, logs snap to a 240px grid (the smallest unit — 1/4 width). A subtle `#1F4E72` guide line pulses at each snap point. On iOS Safari, the dragging interaction is implemented via `touchstart` / `touchmove` / `touchend` events attached directly to each log element; `pointer-events: none` is set on all non-interactive layers during drag to prevent scroll interference.
 
-**Chop Interaction:** A long-press (500ms) on any log in the Build Zone activates the chop affordance: an axe cursor icon appears, the log pulses amber, and a `tap` (touchend < 300ms) confirms the split. Chopping a 1/2 log produces two 1/4 logs placed end-to-end at the same Y-row. Chopping a 1/1 log produces two 1/2 logs. Chopping a 1/4 log is disabled with a gentle "wiggle" animation — Bucky explains it is already the smallest piece.
+**Chop Interaction:** 6-frame sequence per `docs/visual-mockups/CHOP_STORYBOARD.md`: IDLE → HOLD (500ms progress ring) → READY (dashed cut line) → SWING → SPLIT → DONE. Chopping a 1/2 log produces two 1/4 logs; chopping a 1/1 produces two 1/2 logs. Chopping a 1/4 log is blocked with **"BONK!" text + ✕ badge** plus wiggle and low bonk audio — Bucky explains it is already the smallest piece.
 
 ### 2.4 Reference Gate (INSTRUCT and CHECK phases)
 
@@ -127,7 +129,7 @@ TRANSITIONS:
 |----------|---------|----------|--------------|
 | Reference Gate visible | No | Yes — 1/2 fixed | Yes — new target |
 | Gate label | — | `← 1/2 →` | `← ? →` |
-| Log tray contents | 2× whole, 4× half, 8× quarter | 4× quarter only | 1× half, 4× quarter, 2× whole (mixed) |
+| Log tray contents | **1× whole, 1× half, 2× quarter** (4 logs) | 4× quarter only | 1× half, 4× quarter, 2× whole (mixed) |
 | Chop enabled | Yes | Yes | Yes |
 | Submit button | Hidden | Hidden (replaced by `CHECK` button) | Visible + green |
 | Bucky visible | Yes (idle bounce) | Yes (active) | Yes (waiting pose) |

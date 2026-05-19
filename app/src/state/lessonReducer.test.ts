@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { lessonReducer }  from './lessonReducer'
-import { initLessonState, makeInventory, INSTRUCT_INVENTORY } from './initialState'
+import { initLessonState, makeInventory } from './initialState'
 import { CHECK_CHALLENGES } from './checkChallenges'
-import type { LessonState, BlockState } from './types'
+import type { LessonState } from './types'
 import type { LessonEvent } from './lessonEvents'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -225,20 +225,6 @@ describe('INSTRUCT_BUILD phase', () => {
 // ── INSTRUCT_ERROR ─────────────────────────────────────────────────────────
 
 describe('INSTRUCT_ERROR phase', () => {
-  function getError(attemptCount: number): LessonState {
-    let s = stateAt('INSTRUCT_BUILD')
-    // Force wrong_type error (attemptCount starts at 0, increments on error)
-    for (let i = 0; i < attemptCount; i++) {
-      s = { ...s, attemptCount: i }
-      s = dispatch(withHalfInBuildZone(s), { type: 'CHECK_SUBMIT' })
-      // After error, we need to return to INSTRUCT_BUILD for the next attempt
-      if (i < attemptCount - 1) {
-        s = dispatch(s, { type: 'DIALOGUE_ADVANCE' })
-      }
-    }
-    return s
-  }
-
   it('DIALOGUE_ADVANCE with attemptCount=1 → back to INSTRUCT_BUILD, clears buildZoneLogs', () => {
     let s = stateAt('INSTRUCT_BUILD')
     s = dispatch(withHalfInBuildZone(s), { type: 'CHECK_SUBMIT' })
