@@ -237,17 +237,34 @@ export function LessonScreen({ state, dispatch }: Props) {
               </span>
             )}
             {buildBlocks.map(b => (
-              <button
-                key={b.id}
-                onClick={() => dispatch({ type: 'LOG_RETURNED', blockId: b.id })}
-                style={{
-                  background: 'none', border: 'none', padding: 0,
-                  cursor: 'pointer', flexShrink: 0,
-                }}
-                title="Click to return to tray"
-              >
+              <div key={b.id} style={{ position: 'relative', flexShrink: 0 }}>
                 <Log block={b} dispatch={dispatch} />
-              </button>
+                {/* Always show × so students know they can remove logs */}
+                <button
+                  onClick={() => dispatch({ type: 'LOG_RETURNED', blockId: b.id })}
+                  style={{
+                    position:       'absolute',
+                    top:            '-10px',
+                    right:          '-10px',
+                    width:          '22px',
+                    height:         '22px',
+                    borderRadius:   '50%',
+                    background:     'var(--error-glow, #F87171)',
+                    border:         'none',
+                    color:          '#fff',
+                    fontSize:       '14px',
+                    fontWeight:     700,
+                    lineHeight:     '22px',
+                    textAlign:      'center',
+                    cursor:         'pointer',
+                    padding:        0,
+                    zIndex:         1,
+                  }}
+                  title="Return to tray"
+                >
+                  ×
+                </button>
+              </div>
             ))}
           </div>
 
@@ -342,12 +359,15 @@ export function LessonScreen({ state, dispatch }: Props) {
           </span>
         )}
 
-        {/* In build phases: also show a "← return" hint */}
-        {isBuildActive && buildBlocks.length > 0 && (
+        {/* Undo: remove the last-placed log — works in all phases */}
+        {buildBlocks.length > 0 && (
           <button
             onClick={() => {
-              const last = state.buildZoneLogs[state.buildZoneLogs.length - 1]
-              if (last) dispatch({ type: 'LOG_RETURNED', blockId: last })
+              // In build phases buildZoneLogs is tracked; in EXPLORE fall back to buildBlocks
+              const lastId =
+                state.buildZoneLogs[state.buildZoneLogs.length - 1]
+                ?? buildBlocks[buildBlocks.length - 1]?.id
+              if (lastId) dispatch({ type: 'LOG_RETURNED', blockId: lastId })
             }}
             style={{
               marginLeft:   'auto',
