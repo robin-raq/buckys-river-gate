@@ -20,6 +20,9 @@ const THREE_Q = fv(3, 4)
 // ── validateBuildZone ──────────────────────────────────────────────────────
 describe('validateBuildZone', () => {
   describe('correct', () => {
+    it('single 1/4 fills a 1/4 gate', () => {
+      expect(validateBuildZone([QUARTER], QUARTER)).toBe('correct')
+    })
     it('1/4 + 1/4 fills a 1/2 gate', () => {
       expect(validateBuildZone([QUARTER, QUARTER], HALF)).toBe('correct')
     })
@@ -86,11 +89,11 @@ describe('computeOverflowBracket', () => {
   it('whole log against 1/2 gate → whole_log', () => {
     expect(computeOverflowBracket([WHOLE], HALF, 0)).toBe('whole_log')
   })
-  it('three 1/4 logs on challenge index 2 → decoy_c2', () => {
-    expect(computeOverflowBracket([QUARTER, QUARTER, QUARTER], HALF, 2)).toBe('decoy_c2')
+  it('three 1/4 logs on challenge index 1 (1/2 gate) → decoy_c2', () => {
+    expect(computeOverflowBracket([QUARTER, QUARTER, QUARTER], HALF, 1)).toBe('decoy_c2')
   })
-  it('three 1/4 logs on challenge index 0 → one_unit (not decoy)', () => {
-    expect(computeOverflowBracket([QUARTER, QUARTER, QUARTER], HALF, 0)).toBe('one_unit')
+  it('two 1/4 logs on challenge index 0 (1/4 gate) → one_unit', () => {
+    expect(computeOverflowBracket([QUARTER, QUARTER], QUARTER, 0)).toBe('one_unit')
   })
   it('1/2 + 1/4 against 1/2 gate → one_unit overflow', () => {
     expect(computeOverflowBracket([HALF, QUARTER], HALF, 0)).toBe('one_unit')
@@ -131,49 +134,49 @@ describe('fractionsEqual', () => {
 
 // ── isSolutionValid ────────────────────────────────────────────────────────
 describe('isSolutionValid', () => {
-  const C0 = CHECK_CHALLENGES[0]  // gate 1/2 — valid: [1/2] or [1/4,1/4]
-  const C1 = CHECK_CHALLENGES[1]  // gate 3/4 — valid: [1/2,1/4] or [1/4,1/4,1/4]
-  const C2 = CHECK_CHALLENGES[2]  // gate 1/2 — valid: [1/4,1/4] ONLY
+  const C0 = CHECK_CHALLENGES[0]  // gate 1/4 — valid: [1/4]
+  const C1 = CHECK_CHALLENGES[1]  // gate 1/2 — valid: [1/2] or [1/4,1/4]
+  const C2 = CHECK_CHALLENGES[2]  // gate 3/4 — valid: [1/2,1/4] or [1/4,1/4,1/4]
 
-  describe('Challenge 0', () => {
+  describe('Challenge 0 — gate 1/4', () => {
+    it('[1/4] is valid', () => {
+      expect(isSolutionValid([QUARTER], C0)).toBe(true)
+    })
+    it('[1/4, 1/4] overflows — not valid', () => {
+      expect(isSolutionValid([QUARTER, QUARTER], C0)).toBe(false)
+    })
+    it('[1/2] is too long — not valid', () => {
+      expect(isSolutionValid([HALF], C0)).toBe(false)
+    })
+  })
+
+  describe('Challenge 1 — gate 1/2', () => {
     it('[1/2] is valid', () => {
-      expect(isSolutionValid([HALF], C0)).toBe(true)
+      expect(isSolutionValid([HALF], C1)).toBe(true)
     })
     it('[1/4, 1/4] is valid', () => {
-      expect(isSolutionValid([QUARTER, QUARTER], C0)).toBe(true)
+      expect(isSolutionValid([QUARTER, QUARTER], C1)).toBe(true)
     })
     it('[1/4] alone is not valid', () => {
-      expect(isSolutionValid([QUARTER], C0)).toBe(false)
+      expect(isSolutionValid([QUARTER], C1)).toBe(false)
     })
     it('[1/4, 1/4, 1/4] overflows — not valid', () => {
-      expect(isSolutionValid([QUARTER, QUARTER, QUARTER], C0)).toBe(false)
+      expect(isSolutionValid([QUARTER, QUARTER, QUARTER], C1)).toBe(false)
     })
   })
 
-  describe('Challenge 1', () => {
+  describe('Challenge 2 — gate 3/4', () => {
     it('[1/2, 1/4] is valid', () => {
-      expect(isSolutionValid([HALF, QUARTER], C1)).toBe(true)
+      expect(isSolutionValid([HALF, QUARTER], C2)).toBe(true)
     })
     it('[1/4, 1/4, 1/4] is valid', () => {
-      expect(isSolutionValid([QUARTER, QUARTER, QUARTER], C1)).toBe(true)
+      expect(isSolutionValid([QUARTER, QUARTER, QUARTER], C2)).toBe(true)
     })
     it('[1/2, 1/2] overflows — not valid', () => {
-      expect(isSolutionValid([HALF, HALF], C1)).toBe(false)
+      expect(isSolutionValid([HALF, HALF], C2)).toBe(false)
     })
     it('[1/4, 1/4] is too short — not valid', () => {
-      expect(isSolutionValid([QUARTER, QUARTER], C1)).toBe(false)
-    })
-  })
-
-  describe('Challenge 2 — decoy quarter', () => {
-    it('[1/4, 1/4] is valid', () => {
-      expect(isSolutionValid([QUARTER, QUARTER], C2)).toBe(true)
-    })
-    it('[1/4, 1/4, 1/4] triggers the decoy — not valid', () => {
-      expect(isSolutionValid([QUARTER, QUARTER, QUARTER], C2)).toBe(false)
-    })
-    it('[1/2] is not in C2 valid solutions', () => {
-      expect(isSolutionValid([HALF], C2)).toBe(false)
+      expect(isSolutionValid([QUARTER, QUARTER], C2)).toBe(false)
     })
   })
 })

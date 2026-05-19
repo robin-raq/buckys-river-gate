@@ -1,0 +1,55 @@
+/* Ghost overlay — dashed target width hint on 2nd CHECK failure */
+.ghost-overlay {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  height: 72px;
+  border: 2px dashed rgba(52, 211, 153, 0.75);
+  border-radius: 12px;
+  background: rgba(52, 211, 153, 0.08);
+  pointer-events: none;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.ghost-overlay__label {
+  color: rgba(52, 211, 153, 0.9);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* Equivalence badge — "= equation" slam on correct CHECK */
+.equivalence-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fbbf24;
+  text-shadow: 0 0 24px rgba(251, 191, 36, 0.8);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+
+.equivalence-badge-slam {
+  animation: equivalence-badge-slam 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes equivalence-badge-slam {
+  0% {
+    transform: translate(-50%, -50%) scale(2.5);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}

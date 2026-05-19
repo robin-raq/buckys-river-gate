@@ -345,6 +345,12 @@ export function lessonReducer(state: LessonState, event: LessonEvent): LessonSta
     // ────────────────────────────────────────────────────────────────────
     case 'INSTRUCT_SUCCESS': {
       if (event.type !== 'DIALOGUE_ADVANCE') return state
+      // Two dialogue nodes in this phase:
+      // 1. INSTRUCT_CORRECT (autoAdvance) → INSTRUCT_NAME_EQUIVALENCE (the vocabulary moment)
+      // 2. INSTRUCT_NAME_EQUIVALENCE (tap to continue) → CHECK_INTRO (phase transition)
+      if (state.dialogueNodeId === 'INSTRUCT_CORRECT') {
+        return { ...state, dialogueNodeId: 'INSTRUCT_NAME_EQUIVALENCE' }
+      }
       return {
         ...state,
         phase:          'CHECK_INTRO',
@@ -467,6 +473,12 @@ export function lessonReducer(state: LessonState, event: LessonEvent): LessonSta
     // ────────────────────────────────────────────────────────────────────
     case 'CHECK_ERROR_2': {
       if (event.type !== 'DIALOGUE_ADVANCE') return state
+      // Two dialogue nodes in this phase:
+      // 1. CHECK_ERROR_2_GHOST (tap) → CHECK_ERROR_2_RESTART (auto) — shows the ghost hint
+      // 2. CHECK_ERROR_2_RESTART (autoAdvance) → INSTRUCT_INTRO — transitional message
+      if (state.dialogueNodeId === 'CHECK_ERROR_2_GHOST') {
+        return { ...state, dialogueNodeId: 'CHECK_ERROR_2_RESTART' }
+      }
       return {
         ...state,
         phase:          'INSTRUCT_INTRO',

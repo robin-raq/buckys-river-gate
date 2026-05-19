@@ -1,0 +1,33 @@
+/* Reference gate pulse (GDD §2.6) */
+
+@keyframes gatePulse {
+  0%,
+  100% {
+    box-shadow: 0 0 12px 4px var(--ref-gate, #3bade8);
+  }
+  50% {
+    box-shadow: 0 0 20px 8px var(--ref-gate, #3bade8);
+  }
+}
+
+.reference-gate {
+  border: 3px solid var(--ref-gate, #3bade8);
+  background: rgba(59, 173, 232, 0.15);
+  border-radius: 8px;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.reference-gate--pulse {
+  animation: gatePulse 1.8s ease-in-out infinite;
+}
+
+.reference-gate--gap {
+  outline: 2px dashed var(--error-glow, #f87171);
+  outline-offset: 2px;
+}
+
+.reference-gate--overflow {
+  outline: 2px solid #fb923c;
+  outline-offset: 2px;
+}

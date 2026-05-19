@@ -43,4 +43,33 @@ describe('ReferenceGate', () => {
     // 3/4 of 960px = 720px
     expect(el).toHaveStyle({ width: '720px' })
   })
+
+  it('sets data-highlight-gap when highlightGap=true', () => {
+    render(
+      <ReferenceGate gate={half} visible={true} label="← 1/2 →" highlightGap />,
+    )
+    expect(screen.getByTestId('reference-gate')).toHaveAttribute('data-highlight-gap', 'true')
+  })
+
+  it('sets data-highlight-overflow when highlightOverflow=true', () => {
+    render(
+      <ReferenceGate gate={half} visible={true} label="← 1/2 →" highlightOverflow />,
+    )
+    expect(screen.getByTestId('reference-gate')).toHaveAttribute('data-highlight-overflow', 'true')
+  })
+
+  it('applies pulse and gap modifier classes when visible with highlightGap', () => {
+    render(
+      <ReferenceGate gate={half} visible={true} label="← 1/2 →" highlightGap />,
+    )
+    const el = screen.getByTestId('reference-gate')
+    expect(el).toHaveClass('reference-gate--pulse', 'reference-gate--gap')
+  })
+
+  it('applies overflow modifier class when highlightOverflow=true', () => {
+    render(
+      <ReferenceGate gate={half} visible={true} label="← 1/2 →" highlightOverflow />,
+    )
+    expect(screen.getByTestId('reference-gate')).toHaveClass('reference-gate--overflow')
+  })
 })

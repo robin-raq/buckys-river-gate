@@ -173,7 +173,7 @@ describe('node property contracts', () => {
     expect(node.nextNode).toBe('CHECK_CHALLENGE_START')
   })
 
-  it('CHECK_ERROR_LONG_1_DECOY_C2 — highlightOverflow=true, Challenge 2 specific', () => {
+  it('CHECK_ERROR_LONG_1_DECOY_C2 — highlightOverflow=true, Challenge 1 (1/2 gate) specific', () => {
     const node = getNode('CHECK_ERROR_LONG_1_DECOY_C2')
     expect(node.highlightOverflow).toBe(true)
     expect(node.nextNode).toBe('CHECK_CHALLENGE_START')

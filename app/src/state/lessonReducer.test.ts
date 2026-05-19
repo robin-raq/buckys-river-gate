@@ -325,10 +325,22 @@ describe('INSTRUCT_ERROR phase', () => {
 // ── INSTRUCT_SUCCESS → CHECK_INTRO ─────────────────────────────────────────
 
 describe('INSTRUCT_SUCCESS phase', () => {
-  it('DIALOGUE_ADVANCE → CHECK_INTRO', () => {
+  it('1st DIALOGUE_ADVANCE (from INSTRUCT_CORRECT) → shows INSTRUCT_NAME_EQUIVALENCE, stays in INSTRUCT_SUCCESS', () => {
     let s = stateAt('INSTRUCT_BUILD')
     s = dispatch(withTwoQuartersInBuildZone(s), { type: 'CHECK_SUBMIT' })
     expect(s.phase).toBe('INSTRUCT_SUCCESS')
+    expect(s.dialogueNodeId).toBe('INSTRUCT_CORRECT')
+
+    const mid = dispatch(s, { type: 'DIALOGUE_ADVANCE' })
+    expect(mid.phase).toBe('INSTRUCT_SUCCESS')
+    expect(mid.dialogueNodeId).toBe('INSTRUCT_NAME_EQUIVALENCE')
+  })
+
+  it('2nd DIALOGUE_ADVANCE (from INSTRUCT_NAME_EQUIVALENCE) → CHECK_INTRO', () => {
+    let s = stateAt('INSTRUCT_BUILD')
+    s = dispatch(withTwoQuartersInBuildZone(s), { type: 'CHECK_SUBMIT' })
+    s = dispatch(s, { type: 'DIALOGUE_ADVANCE' })  // → INSTRUCT_NAME_EQUIVALENCE
+    expect(s.dialogueNodeId).toBe('INSTRUCT_NAME_EQUIVALENCE')
 
     const next = dispatch(s, { type: 'DIALOGUE_ADVANCE' })
     expect(next.phase).toBe('CHECK_INTRO')
@@ -342,7 +354,8 @@ describe('CHECK_INTRO phase', () => {
   function getCheckIntro(): LessonState {
     let s = stateAt('INSTRUCT_BUILD')
     s = dispatch(withTwoQuartersInBuildZone(s), { type: 'CHECK_SUBMIT' })
-    return dispatch(s, { type: 'DIALOGUE_ADVANCE' })  // → CHECK_INTRO
+    s = dispatch(s, { type: 'DIALOGUE_ADVANCE' })  // INSTRUCT_CORRECT → INSTRUCT_NAME_EQUIVALENCE
+    return dispatch(s, { type: 'DIALOGUE_ADVANCE' }) // INSTRUCT_NAME_EQUIVALENCE → CHECK_INTRO
   }
 
   it('DIALOGUE_ADVANCE → CHECK_ACTIVE, challengeIndex=0, referenceGate from C0', () => {
@@ -405,78 +418,82 @@ describe('CHECK_ACTIVE phase', () => {
     return next
   }
 
-  describe('Challenge 0 — gate 1/2', () => {
-    it('valid [1/2] → CHECK_SUCCESS, challengesPassed increments', () => {
-      let s = snapBlocks(checkActiveAt(0), [2])
+  describe('Challenge 0 — gate 1/4', () => {
+    it('valid [1/4] → CHECK_SUCCESS, challengesPassed increments', () => {
+      let s = snapBlocks(checkActiveAt(0), [4])
       s = dispatch(s, { type: 'CHECK_SUBMIT' })
       expect(s.phase).toBe('CHECK_SUCCESS')
       expect(s.challengesPassed).toBe(1)
       expect(s.attemptCount).toBe(0)
     })
 
-    it('valid [1/4, 1/4] → CHECK_SUCCESS', () => {
-      let s = snapBlocks(checkActiveAt(0), [4, 4])
-      s = dispatch(s, { type: 'CHECK_SUBMIT' })
-      expect(s.phase).toBe('CHECK_SUCCESS')
-    })
-
-    it('too_short [1/4 only] → CHECK_ERROR_1, attemptCount=1', () => {
-      let s = snapBlocks(checkActiveAt(0), [4])
+    it('too_short (empty) → CHECK_ERROR_1, attemptCount=1', () => {
+      let s = checkActiveAt(0)
       s = dispatch(s, { type: 'CHECK_SUBMIT' })
       expect(s.phase).toBe('CHECK_ERROR_1')
       expect(s.attemptCount).toBe(1)
     })
 
-    it('too_short error sets errorType to "too_short"', () => {
-      let s = snapBlocks(checkActiveAt(0), [4])
-      s = dispatch(s, { type: 'CHECK_SUBMIT' })
-      expect(s.errorType).toBe('too_short')
-    })
-
-    it('too_long error sets errorType to "too_long"', () => {
-      // Challenge 2: gate=1/2, inventory=[1/4,1/4,1/4]. Snap all 3 → 3/4 > 1/2
-      let s = snapBlocks(checkActiveAt(2), [4, 4, 4])
+    it('too_long [1/4, 1/4] → CHECK_ERROR_1', () => {
+      let s = snapBlocks(checkActiveAt(0), [4, 4])
       s = dispatch(s, { type: 'CHECK_SUBMIT' })
       expect(s.phase).toBe('CHECK_ERROR_1')
-      expect(s.errorType).toBe('too_long')
+    })
+
+    it('too_long [1/2] → CHECK_ERROR_1', () => {
+      let s = snapBlocks(checkActiveAt(0), [2])
+      s = dispatch(s, { type: 'CHECK_SUBMIT' })
+      expect(s.phase).toBe('CHECK_ERROR_1')
     })
   })
 
-  describe('Challenge 1 — gate 3/4', () => {
-    it('valid [1/2, 1/4] → CHECK_SUCCESS', () => {
-      let s = snapBlocks(checkActiveAt(1), [2, 4])
+  describe('Challenge 1 — gate 1/2', () => {
+    it('valid [1/2] → CHECK_SUCCESS', () => {
+      let s = snapBlocks(checkActiveAt(1), [2])
       s = dispatch(s, { type: 'CHECK_SUBMIT' })
       expect(s.phase).toBe('CHECK_SUCCESS')
       expect(s.challengesPassed).toBe(2)
     })
 
-    it('valid [1/4, 1/4, 1/4] → CHECK_SUCCESS', () => {
-      let s = snapBlocks(checkActiveAt(1), [4, 4, 4])
+    it('valid [1/4, 1/4] → CHECK_SUCCESS', () => {
+      let s = snapBlocks(checkActiveAt(1), [4, 4])
       s = dispatch(s, { type: 'CHECK_SUBMIT' })
       expect(s.phase).toBe('CHECK_SUCCESS')
     })
+
+    it('too_short [1/4 only] → CHECK_ERROR_1', () => {
+      let s = snapBlocks(checkActiveAt(1), [4])
+      s = dispatch(s, { type: 'CHECK_SUBMIT' })
+      expect(s.phase).toBe('CHECK_ERROR_1')
+    })
+
+    it('decoy [1/4, 1/4, 1/4] → CHECK_ERROR_1 with DECOY_C2 dialogue', () => {
+      let s = snapBlocks(checkActiveAt(1), [4, 4, 4])
+      s = dispatch(s, { type: 'CHECK_SUBMIT' })
+      expect(s.phase).toBe('CHECK_ERROR_1')
+      expect(s.dialogueNodeId).toBe('CHECK_ERROR_LONG_1_DECOY_C2')
+    })
   })
 
-  describe('Challenge 2 — gate 1/2, decoy quarter', () => {
-    it('valid [1/4, 1/4] → CHECK_SUCCESS, challengesPassed becomes 3', () => {
-      let s = snapBlocks(checkActiveAt(2), [4, 4])
+  describe('Challenge 2 — gate 3/4', () => {
+    it('valid [1/2, 1/4] → CHECK_SUCCESS, challengesPassed becomes 3', () => {
+      let s = snapBlocks(checkActiveAt(2), [2, 4])
       s = dispatch(s, { type: 'CHECK_SUBMIT' })
       expect(s.phase).toBe('CHECK_SUCCESS')
       expect(s.challengesPassed).toBe(3)
     })
 
-    it('decoy [1/4, 1/4, 1/4] → CHECK_ERROR_1 (too_long)', () => {
+    it('valid [1/4, 1/4, 1/4] → CHECK_SUCCESS', () => {
       let s = snapBlocks(checkActiveAt(2), [4, 4, 4])
       s = dispatch(s, { type: 'CHECK_SUBMIT' })
-      expect(s.phase).toBe('CHECK_ERROR_1')
+      expect(s.phase).toBe('CHECK_SUCCESS')
     })
   })
 
   describe('Error escalation', () => {
     it('second error in same challenge → CHECK_ERROR_2', () => {
       let s = checkActiveAt(0)
-      // First wrong attempt
-      s = snapBlocks(s, [4])    // too_short
+      // First wrong attempt — empty build zone
       s = dispatch(s, { type: 'CHECK_SUBMIT' })
       expect(s.phase).toBe('CHECK_ERROR_1')
       expect(s.attemptCount).toBe(1)
@@ -486,15 +503,12 @@ describe('CHECK_ACTIVE phase', () => {
       expect(s.phase).toBe('CHECK_ACTIVE')
 
       // Second wrong attempt
-      s = { ...s, buildZoneLogs: [] }
-      s = snapBlocks(s, [4])    // too_short again
       s = dispatch(s, { type: 'CHECK_SUBMIT' })
       expect(s.phase).toBe('CHECK_ERROR_2')
     })
 
     it('totalAttempts >= 5 → CHECK_ERROR_1 with CHECK_INTERVENTION node', () => {
       let s = { ...checkActiveAt(0), totalAttempts: 5 }
-      s = snapBlocks(s, [4])
       s = dispatch(s, { type: 'CHECK_SUBMIT' })
       expect(s.phase).toBe('CHECK_ERROR_1')
       expect(s.dialogueNodeId).toBe('CHECK_INTERVENTION')
@@ -503,7 +517,7 @@ describe('CHECK_ACTIVE phase', () => {
 
   describe('CHECK_ERROR_1', () => {
     it('DIALOGUE_ADVANCE → CHECK_ACTIVE, clears buildZoneLogs', () => {
-      let s = snapBlocks(checkActiveAt(0), [4])
+      let s = checkActiveAt(0)
       s = dispatch(s, { type: 'CHECK_SUBMIT' })
       expect(s.phase).toBe('CHECK_ERROR_1')
       const next = dispatch(s, { type: 'DIALOGUE_ADVANCE' })
@@ -513,18 +527,26 @@ describe('CHECK_ACTIVE phase', () => {
   })
 
   describe('CHECK_ERROR_2', () => {
-    it('DIALOGUE_ADVANCE → INSTRUCT_INTRO, resets attemptCount', () => {
-      // Two wrong attempts to reach CHECK_ERROR_2
+    function atCheckError2(): LessonState {
       let s = checkActiveAt(0)
-      s = snapBlocks(s, [4])
       s = dispatch(s, { type: 'CHECK_SUBMIT' })           // CHECK_ERROR_1
-      s = dispatch(s, { type: 'DIALOGUE_ADVANCE' })        // CHECK_ACTIVE
-      s = { ...s, buildZoneLogs: [] }
-      s = snapBlocks(s, [4])
-      s = dispatch(s, { type: 'CHECK_SUBMIT' })           // CHECK_ERROR_2
+      s = dispatch(s, { type: 'DIALOGUE_ADVANCE' })        // → CHECK_ACTIVE
+      s = dispatch(s, { type: 'CHECK_SUBMIT' })           // → CHECK_ERROR_2 (GHOST)
       expect(s.phase).toBe('CHECK_ERROR_2')
+      expect(s.dialogueNodeId).toBe('CHECK_ERROR_2_GHOST')
+      return s
+    }
 
-      const next = dispatch(s, { type: 'DIALOGUE_ADVANCE' })
+    it('1st DIALOGUE_ADVANCE (tap on GHOST) → CHECK_ERROR_2_RESTART, stays in CHECK_ERROR_2', () => {
+      const next = dispatch(atCheckError2(), { type: 'DIALOGUE_ADVANCE' })
+      expect(next.phase).toBe('CHECK_ERROR_2')
+      expect(next.dialogueNodeId).toBe('CHECK_ERROR_2_RESTART')
+    })
+
+    it('2nd DIALOGUE_ADVANCE (autoAdvance on RESTART) → INSTRUCT_INTRO, resets attemptCount', () => {
+      let s = atCheckError2()
+      s = dispatch(s, { type: 'DIALOGUE_ADVANCE' })        // → CHECK_ERROR_2_RESTART
+      const next = dispatch(s, { type: 'DIALOGUE_ADVANCE' })  // → INSTRUCT_INTRO
       expect(next.phase).toBe('INSTRUCT_INTRO')
       expect(next.attemptCount).toBe(0)
       expect(next.dialogueNodeId).toBe('INSTRUCT_GATE_INTRO')

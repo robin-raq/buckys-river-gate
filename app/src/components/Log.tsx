@@ -17,6 +17,16 @@ const LOG_COLORS: Record<number, string> = {
   4: 'var(--log-quarter, #C49A6C)',
 }
 
+const LOG_SIZE_CLASS: Record<number, string> = {
+  1: 'log--whole',
+  2: 'log--half',
+  4: 'log--quarter',
+}
+
+function logSizeClass(denominator: number): string {
+  return LOG_SIZE_CLASS[denominator] ?? LOG_SIZE_CLASS[4]
+}
+
 export function Log({ block, dispatch }: LogProps) {
   const color       = LOG_COLORS[block.denominator] ?? LOG_COLORS[4]
   const lastTapRef  = useRef<number>(0)
@@ -52,6 +62,7 @@ export function Log({ block, dispatch }: LogProps) {
 
   return (
     <div
+      className={`log ${logSizeClass(block.denominator)}`}
       data-testid={`log-${block.id}`}
       data-numerator={block.numerator}
       data-denominator={block.denominator}

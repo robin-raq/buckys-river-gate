@@ -85,6 +85,12 @@ describe('Log', () => {
     // Should have "1/4" somewhere in the log label
     expect(screen.getByText(/1\/4|¼/)).toBeInTheDocument()
   })
+
+  it('applies log--quarter class for 1/4 denominator', () => {
+    render(<Log block={makeBlock({ denominator: 4 })} dispatch={vi.fn()} />)
+    const el = screen.getByTestId('log-test-block-1')
+    expect(el).toHaveClass('log', 'log--quarter')
+  })
 })
 
 // ── Double-tap to chop ──────────────────────────────────────────────────────

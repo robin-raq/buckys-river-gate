@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useReducedMotion } from '../hooks/useReducedMotion'
 
 interface SpeechBubbleProps {
   text:        string
@@ -7,30 +8,62 @@ interface SpeechBubbleProps {
 
 // Characters per millisecond for the typewriter effect.
 // At 40 chars/s a typical Bucky line (~60 chars) plays in ~1.5s.
-const CHARS_PER_MS = 40 / 1000
+export const CHARS_PER_MS = 40 / 1000
+
+const MS_PER_CHAR = 1 / CHARS_PER_MS
+
+function initialVisibleCount(text: string, reducedMotion: boolean): number {
+  if (reducedMotion) return text.length
+  return text.length > 0 ? 1 : 0
+}
 
 export function SpeechBubble({ text, onComplete }: SpeechBubbleProps) {
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const reducedMotion = useReducedMotion()
+  const [visibleCount, setVisibleCount] = useState(() =>
+    initialVisibleCount(text, reducedMotion),
+  )
+  const completedRef = useRef(false)
+  const onCompleteRef = useRef(onComplete)
 
   useEffect(() => {
-    // Clear any pending timer from the previous text
-    if (timerRef.current !== null) clearTimeout(timerRef.current)
+    onCompleteRef.current = onComplete
+  }, [onComplete])
 
-    // Schedule onComplete after the typewriter duration
-    const duration = Math.max(100, text.length / CHARS_PER_MS)
-    timerRef.current = setTimeout(() => {
-      onComplete?.()
-    }, duration)
+  useEffect(() => {
+    completedRef.current = false
+    setVisibleCount(initialVisibleCount(text, reducedMotion))
 
-    return () => {
-      if (timerRef.current !== null) clearTimeout(timerRef.current)
+    if (reducedMotion || text.length <= 1) return
+
+    let count = 1
+    let timerId: ReturnType<typeof setTimeout>
+
+    const tick = () => {
+      count += 1
+      setVisibleCount(count)
+      if (count < text.length) {
+        timerId = setTimeout(tick, MS_PER_CHAR)
+      }
     }
-  }, [text, onComplete])
+
+    timerId = setTimeout(tick, MS_PER_CHAR)
+
+    return () => clearTimeout(timerId)
+  }, [text, reducedMotion])
+
+  useEffect(() => {
+    if (visibleCount < text.length || completedRef.current) return
+    completedRef.current = true
+    onCompleteRef.current?.()
+  }, [visibleCount, text.length, text])
+
+  const displayed = text.slice(0, visibleCount)
 
   return (
     <div
       role="status"
       aria-live="polite"
+      data-testid="speech-bubble"
       style={{
         background:   'var(--bucky-bubble, #FEFCE8)',
         color:        'var(--bucky-text, #1C1917)',
@@ -42,7 +75,7 @@ export function SpeechBubble({ text, onComplete }: SpeechBubbleProps) {
         boxShadow:    '0 2px 8px rgba(0,0,0,0.3)',
       }}
     >
-      {text}
+      {displayed}
     </div>
   )
 }

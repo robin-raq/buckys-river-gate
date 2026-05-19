@@ -44,9 +44,8 @@ export function computeShortfallBracket(
 }
 
 // ── Overflow bracket ───────────────────────────────────────────────────────
-// Maps how-far-over to a dialogue selector. The decoy case (Challenge 2,
-// all 3 quarters placed) gets its own branch so Bucky can say
-// "three of them is too many for a half gap!"
+// Maps how-far-over to a dialogue selector. Challenge 1 (1/2 gate): three
+// quarter logs placed gets a specific hint ("three is too many for a half gap").
 
 export function computeOverflowBracket(
   placed:         FractionValue[],
@@ -57,7 +56,15 @@ export function computeOverflowBracket(
   if (hasWholeLog) return 'whole_log'
 
   const overflow = sumFourths(placed) - toFourths(gate)  // always > 0 at call site
-  if (overflow === 1 && challengeIndex === 2) return 'decoy_c2'
+  const quarterCount = placed.filter(f => f.denominator === 4).length
+  if (
+    challengeIndex === 1
+    && quarterCount === 3
+    && overflow === 1
+    && toFourths(gate) === 2
+  ) {
+    return 'decoy_c2'
+  }
   return 'one_unit'
 }
 
