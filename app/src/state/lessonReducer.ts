@@ -127,8 +127,9 @@ export function lessonReducer(state: LessonState, event: LessonEvent): LessonSta
       if (event.type !== 'START') return state
       return {
         ...state,
-        phase:           'EXPLORE',
-        audioUnlocked:   true,
+        phase:            'EXPLORE',
+        dialogueNodeId:   'EXPLORE_INTRO',
+        audioUnlocked:    true,
         exploreStartTime: Date.now(),
       }
     }

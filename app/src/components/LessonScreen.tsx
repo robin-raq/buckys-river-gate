@@ -1,4 +1,4 @@
-import type { Dispatch } from 'react'
+import { useEffect, useRef, type Dispatch } from 'react'
 import type { LessonState } from '../state/types'
 import type { LessonEvent } from '../state/lessonEvents'
 import { getNode }          from '../state/dialogue'
@@ -19,8 +19,10 @@ const BUILD_PHASES = new Set([
   'INSTRUCT_BUILD', 'INSTRUCT_ERROR',
   'CHECK_ACTIVE', 'CHECK_ERROR_1', 'CHECK_ERROR_2',
 ])
-
 const CHECK_PHASES = new Set(['CHECK_ACTIVE', 'CHECK_ERROR_1', 'CHECK_ERROR_2'])
+
+// How long the EXPLORE free-play phase lasts before auto-advancing (ms)
+const EXPLORE_TIMEOUT_MS = 30_000
 
 export function LessonScreen({ state, dispatch }: Props) {
   const node          = getNode(state.dialogueNodeId)
@@ -28,93 +30,142 @@ export function LessonScreen({ state, dispatch }: Props) {
   const buildBlocks   = state.blocks.filter(b => b.zone === 'build')
   const isCheckPhase  = CHECK_PHASES.has(state.phase)
   const isBuildActive = BUILD_PHASES.has(state.phase)
+  const isExplore     = state.phase === 'EXPLORE'
   const canSubmit     = state.buildZoneLogs.length > 0
 
-  // Label for the reference gate
   const { numerator: gn, denominator: gd } = state.referenceGate
   const gateLabel = `← ${gn}/${gd} →`
 
-  function handleDialogueAdvance() {
-    if (node.nextNode) {
-      // Still walking a chain within the same phase — update dialogueNodeId locally
-      // by dispatching DIALOGUE_ADVANCE; the reducer handles chain vs phase transitions
+  // ── EXPLORE timeout ──────────────────────────────────────────────────────
+  const exploreTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (state.phase !== 'EXPLORE') return
+    exploreTimer.current = setTimeout(
+      () => dispatch({ type: 'EXPLORE_TIMEOUT' }),
+      EXPLORE_TIMEOUT_MS,
+    )
+    return () => { if (exploreTimer.current) clearTimeout(exploreTimer.current) }
+  }, [state.phase, dispatch])
+
+  // ── Dialogue advance ─────────────────────────────────────────────────────
+  function advance() { dispatch({ type: 'DIALOGUE_ADVANCE' }) }
+
+  // ── Canvas viewport scaling ──────────────────────────────────────────────
+  // The river is designed at RIVER_WIDTH_PX (960). We scale it down if the
+  // viewport is narrower so nothing ever clips or scrolls horizontally.
+  const canvasRef  = useRef<HTMLDivElement>(null)
+  const scaleRef   = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function applyScale() {
+      const outer = canvasRef.current
+      const inner = scaleRef.current
+      if (!outer || !inner) return
+      const available = outer.clientWidth
+      const scale     = Math.min(1, available / RIVER_WIDTH_PX)
+      inner.style.transform       = `scale(${scale})`
+      inner.style.transformOrigin = 'top left'
+      outer.style.height          = `${inner.offsetHeight * scale}px`
     }
-    dispatch({ type: 'DIALOGUE_ADVANCE' })
-  }
+    applyScale()
+    window.addEventListener('resize', applyScale)
+    return () => window.removeEventListener('resize', applyScale)
+  }, [])
 
   return (
     <div style={{
-      display:        'flex',
-      flexDirection:  'column',
-      height:         '100dvh',
-      background:     'var(--bg-deep)',
-      color:          'var(--ui-text)',
-      fontFamily:     'system-ui, sans-serif',
-      overflow:       'hidden',
-      touchAction:    'none',
+      display:       'flex',
+      flexDirection: 'column',
+      height:        '100dvh',
+      background:    'var(--bg-deep)',
+      color:         'var(--ui-text)',
+      fontFamily:    'system-ui, sans-serif',
+      overflow:      'hidden',
+      touchAction:   'manipulation',
     }}>
 
-      {/* ── Top bar ── */}
+      {/* ── Top bar ───────────────────────────────────────────────────── */}
       <div style={{
-        height:          '64px',
-        display:         'flex',
-        alignItems:      'center',
-        justifyContent:  'space-between',
-        padding:         '0 1rem',
-        flexShrink:      0,
-        borderBottom:    '1px solid var(--grid-line)',
+        height:         '52px',
+        display:        'flex',
+        alignItems:     'center',
+        justifyContent: 'space-between',
+        padding:        '0 1rem',
+        flexShrink:     0,
+        borderBottom:   '1px solid var(--grid-line)',
+        gap:            '0.5rem',
       }}>
-        <span style={{ fontWeight: 700, fontSize: '1rem' }}>🪵 Bucky's River Gate</span>
+        <span style={{ fontWeight: 700, fontSize: '0.95rem', whiteSpace: 'nowrap' }}>
+          🪵 Bucky's River Gate
+        </span>
+
         {isCheckPhase && (
-          <ChallengeCounter
-            current={state.challengeIndex + 1}
-            total={3}
-          />
+          <ChallengeCounter current={state.challengeIndex + 1} total={3} />
         )}
-        <span style={{ fontSize: '0.8rem', opacity: 0.5 }}>
+
+        {/* EXPLORE: skip button so demo can progress */}
+        {isExplore && (
+          <button
+            onClick={() => dispatch({ type: 'EXPLORE_COMPLETE' })}
+            style={{
+              padding:      '0.3rem 0.8rem',
+              fontSize:     '0.8rem',
+              background:   'transparent',
+              color:        'var(--ui-text)',
+              border:       '1px solid var(--grid-line)',
+              borderRadius: '0.4rem',
+              cursor:       'pointer',
+              opacity:      0.7,
+            }}
+          >
+            Ready! →
+          </button>
+        )}
+
+        <span style={{ fontSize: '0.7rem', opacity: 0.4, flexShrink: 0 }}>
           {state.phase}
         </span>
       </div>
 
-      {/* ── Bucky dialogue ── */}
+      {/* ── Bucky dialogue ─────────────────────────────────────────────── */}
       <div style={{
-        padding:     '0.75rem 1rem',
-        flexShrink:  0,
-        display:     'flex',
-        gap:         '0.75rem',
-        alignItems:  'flex-start',
+        padding:    '0.6rem 1rem',
+        flexShrink: 0,
+        display:    'flex',
+        gap:        '0.6rem',
+        alignItems: 'flex-start',
       }}>
-        {/* Bucky avatar placeholder */}
+        {/* Bucky avatar */}
         <div style={{
-          width:        '56px',
-          height:       '56px',
-          borderRadius: '50%',
-          background:   'var(--log-half)',
-          display:      'flex',
-          alignItems:   'center',
+          width:          '48px',
+          height:         '48px',
+          borderRadius:   '50%',
+          background:     'var(--log-half)',
+          display:        'flex',
+          alignItems:     'center',
           justifyContent: 'center',
-          fontSize:     '1.8rem',
-          flexShrink:   0,
+          fontSize:       '1.6rem',
+          flexShrink:     0,
         }}>
           🦫
         </div>
 
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <SpeechBubble
             text={node.text}
-            onComplete={node.autoAdvance ? handleDialogueAdvance : undefined}
+            onComplete={node.autoAdvance ? advance : undefined}
           />
           {node.tapToContinue && (
             <button
-              onClick={handleDialogueAdvance}
+              onClick={advance}
               style={{
-                marginTop:    '0.5rem',
-                padding:      '0.4rem 1rem',
-                fontSize:     '0.85rem',
+                marginTop:    '0.4rem',
+                padding:      '0.35rem 0.9rem',
+                fontSize:     '0.8rem',
                 background:   'transparent',
                 color:        'var(--ui-text)',
                 border:       '1px solid var(--grid-line)',
-                borderRadius: '0.5rem',
+                borderRadius: '0.4rem',
                 cursor:       'pointer',
               }}
             >
@@ -124,77 +175,90 @@ export function LessonScreen({ state, dispatch }: Props) {
         </div>
       </div>
 
-      {/* ── River canvas ── */}
-      <div style={{
-        flex:           1,
-        display:        'flex',
-        flexDirection:  'column',
-        alignItems:     'center',
-        justifyContent: 'center',
-        padding:        '0.5rem',
-        gap:            '0.5rem',
-        overflow:       'hidden',
-      }}>
+      {/* ── River canvas (viewport-scaled) ─────────────────────────────── */}
+      <div
+        ref={canvasRef}
+        style={{
+          flex:      1,
+          width:     '100%',
+          overflow:  'hidden',
+          position:  'relative',
+          flexShrink: 1,
+        }}
+      >
+        <div
+          ref={scaleRef}
+          style={{
+            width:          `${RIVER_WIDTH_PX}px`,
+            display:        'flex',
+            flexDirection:  'column',
+            alignItems:     'flex-start',
+            padding:        '1.5rem 0 0.75rem',
+            gap:            '0.5rem',
+          }}
+        >
+          {/* Reference gate */}
+          <div style={{ paddingLeft: '0', paddingTop: '0.5rem' }}>
+            <ReferenceGate
+              gate={state.referenceGate}
+              visible={!isExplore}
+              label={gateLabel}
+            />
+          </div>
 
-        {/* Reference gate row */}
-        <div style={{
-          width:    `${RIVER_WIDTH_PX}px`,
-          maxWidth: '100%',
-          paddingTop: '1.5rem',
-          display:  'flex',
-          alignItems: 'center',
-        }}>
-          <ReferenceGate
-            gate={state.referenceGate}
-            visible={true}
-            label={gateLabel}
-          />
-        </div>
+          {/* Build row */}
+          <div style={{
+            width:        `${RIVER_WIDTH_PX}px`,
+            height:       '80px',
+            background:   'var(--river-water)',
+            borderRadius: '8px',
+            border:       '1px solid var(--grid-line)',
+            display:      'flex',
+            alignItems:   'center',
+            padding:      '4px',
+            gap:          '4px',
+          }}>
+            {buildBlocks.length === 0 && (
+              <span style={{ opacity: 0.35, fontSize: '0.8rem', paddingLeft: '0.5rem' }}>
+                {isBuildActive ? 'Drag logs here to fill the gap →' : ''}
+              </span>
+            )}
+            {buildBlocks.map(b => (
+              <Log key={b.id} block={b} dispatch={dispatch} />
+            ))}
+          </div>
 
-        {/* Build zone row */}
-        <div style={{
-          width:        `${RIVER_WIDTH_PX}px`,
-          maxWidth:     '100%',
-          height:       '80px',
-          background:   'var(--river-water)',
-          borderRadius: '8px',
-          border:       '1px solid var(--grid-line)',
-          display:      'flex',
-          alignItems:   'center',
-          padding:      '4px',
-          gap:          '4px',
-          position:     'relative',
-        }}>
-          {buildBlocks.length === 0 && (
-            <span style={{ opacity: 0.4, fontSize: '0.85rem', marginLeft: '0.5rem' }}>
-              Drag logs here →
-            </span>
+          {/* Check button */}
+          {isBuildActive && (
+            <div style={{ paddingTop: '0.25rem' }}>
+              <CheckButton
+                label="CHECK"
+                disabled={!canSubmit}
+                onPress={() => dispatch({ type: 'CHECK_SUBMIT' })}
+              />
+            </div>
           )}
-          {buildBlocks.map(b => (
-            <Log key={b.id} block={b} dispatch={dispatch} />
-          ))}
         </div>
 
-        {/* Check button */}
-        {isBuildActive && (
-          <CheckButton
-            label="CHECK"
-            disabled={!canSubmit}
-            onPress={() => dispatch({ type: 'CHECK_SUBMIT' })}
-          />
-        )}
-
-        {/* Win / success screens */}
+        {/* Win overlay */}
         {state.phase === 'WIN' && (
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '3rem' }}>🎉</div>
-            <p style={{ fontSize: '1.1rem', margin: '0.5rem 0' }}>
+          <div style={{
+            position:       'absolute',
+            inset:          0,
+            display:        'flex',
+            flexDirection:  'column',
+            alignItems:     'center',
+            justifyContent: 'center',
+            background:     'rgba(13,27,42,0.92)',
+            gap:            '1rem',
+          }}>
+            <div style={{ fontSize: '4rem' }}>🎉</div>
+            <p style={{ fontSize: '1.1rem', textAlign: 'center', maxWidth: '360px', margin: 0 }}>
               {node.text}
             </p>
             <button
               onClick={() => dispatch({ type: 'PLAY_AGAIN' })}
               style={{
-                marginTop:    '1rem',
                 padding:      '0.75rem 2rem',
                 fontSize:     '1rem',
                 background:   'var(--success-glow)',
@@ -210,41 +274,74 @@ export function LessonScreen({ state, dispatch }: Props) {
         )}
       </div>
 
-      {/* ── Dock tray ── */}
+      {/* ── Dock tray ──────────────────────────────────────────────────── */}
       <div style={{
-        height:       '140px',
+        minHeight:    '120px',
+        maxHeight:    '160px',
         background:   '#0a1520',
         borderTop:    '2px solid var(--grid-line)',
         display:      'flex',
         alignItems:   'center',
-        padding:      '0 1rem',
-        gap:          '0.75rem',
+        padding:      '0.5rem 0.75rem',
+        gap:          '0.5rem',
         overflowX:    'auto',
+        overflowY:    'hidden',
         flexShrink:   0,
+        WebkitOverflowScrolling: 'touch' as any,
       }}>
-        <span style={{ opacity: 0.5, fontSize: '0.75rem', writingMode: 'vertical-rl', flexShrink: 0 }}>
+        <span style={{
+          opacity:     0.4,
+          fontSize:    '0.65rem',
+          writingMode: 'vertical-rl' as any,
+          flexShrink:  0,
+          letterSpacing: '0.05em',
+        }}>
           TRAY
         </span>
+
         {dockBlocks.map(b => (
           <div
             key={b.id}
             onClick={() => {
-              // Tap to move to build zone (simplified — no drag yet)
-              const nextSlot = state.buildZoneLogs.length
-              dispatch({ type: 'LOG_SNAPPED', blockId: b.id, slot: nextSlot })
+              const slot = state.buildZoneLogs.length
+              dispatch({ type: 'LOG_SNAPPED', blockId: b.id, slot })
             }}
             style={{ cursor: 'pointer', flexShrink: 0 }}
           >
             <Log block={b} dispatch={dispatch} />
           </div>
         ))}
+
         {dockBlocks.length === 0 && (
-          <span style={{ opacity: 0.4, fontSize: '0.85rem' }}>
-            No logs in tray
+          <span style={{ opacity: 0.35, fontSize: '0.8rem' }}>
+            All logs placed
           </span>
         )}
-      </div>
 
+        {/* In build phases: also show a "← return" hint */}
+        {isBuildActive && buildBlocks.length > 0 && (
+          <button
+            onClick={() => {
+              const last = state.buildZoneLogs[state.buildZoneLogs.length - 1]
+              if (last) dispatch({ type: 'LOG_RETURNED', blockId: last })
+            }}
+            style={{
+              marginLeft:   'auto',
+              padding:      '0.4rem 0.75rem',
+              fontSize:     '0.8rem',
+              background:   'transparent',
+              color:        'var(--ui-text)',
+              border:       '1px solid var(--grid-line)',
+              borderRadius: '0.4rem',
+              cursor:       'pointer',
+              flexShrink:   0,
+              opacity:      0.7,
+            }}
+          >
+            ← Undo
+          </button>
+        )}
+      </div>
     </div>
   )
 }
