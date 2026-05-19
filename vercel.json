@@ -1,0 +1,5 @@
+{
+  "buildCommand": "npm install --prefix app && npm run build --prefix app",
+  "outputDirectory": "app/dist",
+  "installCommand": "echo 'deps installed per buildCommand'"
+}
