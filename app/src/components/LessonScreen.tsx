@@ -21,6 +21,12 @@ const BUILD_PHASES = new Set([
 ])
 const CHECK_PHASES = new Set(['CHECK_ACTIVE', 'CHECK_ERROR_1', 'CHECK_ERROR_2'])
 
+// Gate only makes sense once the student has seen INSTRUCT_BUILD
+const GATE_VISIBLE_PHASES = new Set([
+  'INSTRUCT_BUILD', 'INSTRUCT_ERROR', 'INSTRUCT_SUCCESS',
+  'CHECK_INTRO', 'CHECK_ACTIVE', 'CHECK_ERROR_1', 'CHECK_ERROR_2', 'CHECK_SUCCESS', 'WIN',
+])
+
 // How long the EXPLORE free-play phase lasts before auto-advancing (ms)
 const EXPLORE_TIMEOUT_MS = 30_000
 
@@ -31,6 +37,7 @@ export function LessonScreen({ state, dispatch }: Props) {
   const isCheckPhase  = CHECK_PHASES.has(state.phase)
   const isBuildActive = BUILD_PHASES.has(state.phase)
   const isExplore     = state.phase === 'EXPLORE'
+  const gateVisible   = GATE_VISIBLE_PHASES.has(state.phase)
   const canSubmit     = state.buildZoneLogs.length > 0
 
   const { numerator: gn, denominator: gd } = state.referenceGate
@@ -197,16 +204,18 @@ export function LessonScreen({ state, dispatch }: Props) {
             gap:            '0.5rem',
           }}
         >
-          {/* Reference gate */}
-          <div style={{ paddingLeft: '0', paddingTop: '0.5rem' }}>
-            <ReferenceGate
-              gate={state.referenceGate}
-              visible={!isExplore}
-              label={gateLabel}
-            />
-          </div>
+          {/* Reference gate — only visible once introduced */}
+          {gateVisible && (
+            <div style={{ paddingTop: '0.5rem' }}>
+              <ReferenceGate
+                gate={state.referenceGate}
+                visible={true}
+                label={gateLabel}
+              />
+            </div>
+          )}
 
-          {/* Build row */}
+          {/* River row — always shown so logs have somewhere to land */}
           <div style={{
             width:        `${RIVER_WIDTH_PX}px`,
             height:       '80px',
@@ -220,11 +229,25 @@ export function LessonScreen({ state, dispatch }: Props) {
           }}>
             {buildBlocks.length === 0 && (
               <span style={{ opacity: 0.35, fontSize: '0.8rem', paddingLeft: '0.5rem' }}>
-                {isBuildActive ? 'Drag logs here to fill the gap →' : ''}
+                {isExplore
+                  ? 'Click a log below to place it here'
+                  : isBuildActive
+                    ? 'Click logs below to fill the gap →'
+                    : ''}
               </span>
             )}
             {buildBlocks.map(b => (
-              <Log key={b.id} block={b} dispatch={dispatch} />
+              <button
+                key={b.id}
+                onClick={() => dispatch({ type: 'LOG_RETURNED', blockId: b.id })}
+                style={{
+                  background: 'none', border: 'none', padding: 0,
+                  cursor: 'pointer', flexShrink: 0,
+                }}
+                title="Click to return to tray"
+              >
+                <Log block={b} dispatch={dispatch} />
+              </button>
             ))}
           </div>
 
@@ -300,16 +323,17 @@ export function LessonScreen({ state, dispatch }: Props) {
         </span>
 
         {dockBlocks.map(b => (
-          <div
+          <button
             key={b.id}
-            onClick={() => {
-              const slot = state.buildZoneLogs.length
-              dispatch({ type: 'LOG_SNAPPED', blockId: b.id, slot })
+            onClick={() => dispatch({ type: 'LOG_SNAPPED', blockId: b.id, slot: state.buildZoneLogs.length })}
+            style={{
+              background: 'none', border: 'none', padding: 0,
+              cursor: 'pointer', flexShrink: 0,
             }}
-            style={{ cursor: 'pointer', flexShrink: 0 }}
+            title={`Place ${b.numerator}/${b.denominator} log`}
           >
             <Log block={b} dispatch={dispatch} />
-          </div>
+          </button>
         ))}
 
         {dockBlocks.length === 0 && (
