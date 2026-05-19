@@ -174,16 +174,12 @@ describe('EXPLORE phase', () => {
   })
 
   it('CHOP on non-splittable (1/4) block → state unchanged', () => {
-    // 1/1 → two 1/2 (first chop), then 1/2 → two 1/4 (second chop)
-    const whole = explore.blocks.find(b => b.denominator === 1)!
-    const afterChop1 = dispatch(explore, { type: 'CHOP', blockId: whole.id })
-    // afterChop1 has halves — chop one of them to get quarters
-    const half = afterChop1.blocks.find(b => b.denominator === 2 && b.splittable)!
-    const afterChop2 = dispatch(afterChop1, { type: 'CHOP', blockId: half.id })
-    const quarter = afterChop2.blocks.find(b => b.denominator === 4)!
-    const afterChop3 = dispatch(afterChop2, { type: 'CHOP', blockId: quarter.id })
+    // New EXPLORE inventory: [1/2 (splittable), 1/4, 1/4 (not splittable)]
+    // Quarters are directly in inventory — no need to chop down to them
+    const quarter = explore.blocks.find(b => b.denominator === 4)!
+    const afterChop = dispatch(explore, { type: 'CHOP', blockId: quarter.id })
     // Quarter log can't be chopped — block count stays the same
-    expect(afterChop3.blocks.length).toBe(afterChop2.blocks.length)
+    expect(afterChop.blocks.length).toBe(explore.blocks.length)
   })
 
   it('LOG_SNAPPED moves block to build zone', () => {

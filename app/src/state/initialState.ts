@@ -2,12 +2,15 @@ import type { LessonState, BlockState } from './types'
 import { RIVER_WIDTH_PX } from '../constants'
 
 // ── EXPLORE inventory ──────────────────────────────────────────────────────
-// Two whole logs + one half log available in free-play mode.
+// Matches the lesson plan: one half log (the "medium log" Bucky just
+// demonstrated) + two quarter logs for free play.
+// Students discover that chopping the 1/2 gives them two more 1/4 logs —
+// the same split Bucky showed in the DEMO phase.
 
 export const EXPLORE_INVENTORY: Omit<BlockState, 'id'>[] = [
-  { numerator: 1, denominator: 1, pixelWidth: RIVER_WIDTH_PX,       zone: 'dock', slot: null, splittable: true,  selected: false, locked: false },
-  { numerator: 1, denominator: 1, pixelWidth: RIVER_WIDTH_PX,       zone: 'dock', slot: null, splittable: true,  selected: false, locked: false },
-  { numerator: 1, denominator: 2, pixelWidth: RIVER_WIDTH_PX / 2,   zone: 'dock', slot: null, splittable: true,  selected: false, locked: false },
+  { numerator: 1, denominator: 2, pixelWidth: RIVER_WIDTH_PX / 2, zone: 'dock', slot: null, splittable: true,  selected: false, locked: false },
+  { numerator: 1, denominator: 4, pixelWidth: RIVER_WIDTH_PX / 4, zone: 'dock', slot: null, splittable: false, selected: false, locked: false },
+  { numerator: 1, denominator: 4, pixelWidth: RIVER_WIDTH_PX / 4, zone: 'dock', slot: null, splittable: false, selected: false, locked: false },
 ]
 
 // ── INSTRUCT inventory ─────────────────────────────────────────────────────

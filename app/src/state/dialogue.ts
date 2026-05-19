@@ -69,7 +69,7 @@ export const DIALOGUE: Record<string, DialogueNode> = {
   // ── EXPLORE ──────────────────────────────────────────────────────────────
 
   EXPLORE_INTRO: {
-    text:       "Welcome, Builder! I'm Bucky! Tap a log to hear it sing, then drag it to Row 1. Try chopping the big ones!",
+    text:       "Now YOU try! Drag a log into the river. Double-tap the half log to chop it — see what happens!",
     buckyState: 'excited',
     tapToContinue: true,
   },
