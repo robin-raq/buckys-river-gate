@@ -4,9 +4,11 @@ import { buckyStateClass, BUCKY_EMOJI } from '../utils/buckyStateMap'
 export interface BuckyAvatarProps {
   buckyState: BuckyState
   className?: string
+  /** Diameter of the avatar circle in px. Defaults to 72. Emoji scales proportionally. */
+  size?: number
 }
 
-export function BuckyAvatar({ buckyState, className }: BuckyAvatarProps) {
+export function BuckyAvatar({ buckyState, className, size = 72 }: BuckyAvatarProps) {
   const stateClass = buckyStateClass(buckyState)
   const classes = ['bucky-avatar', stateClass, className].filter(Boolean).join(' ')
 
@@ -16,13 +18,13 @@ export function BuckyAvatar({ buckyState, className }: BuckyAvatarProps) {
       data-bucky-state={buckyState}
       data-testid="bucky-avatar"
       style={{
-        width:          72,
-        height:         72,
+        width:          size,
+        height:         size,
         borderRadius:   '50%',
         display:        'flex',
         alignItems:     'center',
         justifyContent: 'center',
-        fontSize:       '2.5rem',
+        fontSize:       `${Math.round(size * 0.55)}px`,
         flexShrink:     0,
       }}
       aria-hidden

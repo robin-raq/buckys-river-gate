@@ -7,7 +7,11 @@ interface RiverSceneProps {
 
 export function RiverScene({ children }: RiverSceneProps) {
   return (
-    <div data-testid="river-scene" className="river-scene">
+    <div
+      data-testid="river-scene"
+      className="river-scene"
+      style={{ position: 'absolute', inset: 0, zIndex: 0 }}
+    >
       <div className="river-scene__sky" aria-hidden="true" />
       <div className="river-scene__stars" aria-hidden="true" />
       <div className="river-scene__trees" aria-hidden="true" />

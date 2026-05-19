@@ -383,12 +383,10 @@ export function LessonScreen({ state, dispatch }: Props) {
           bottom:     0,
           left:       '1.5rem',
           zIndex:     25,
-          fontSize:   '7rem',
-          lineHeight: 1,
           userSelect: 'none',
           filter:     'drop-shadow(0 4px 16px rgba(0,0,0,0.6))',
         }}>
-          <BuckyAvatar buckyState={node.buckyState} />
+          <BuckyAvatar buckyState={node.buckyState} size={140} />
         </div>
 
         {/* Next button — large green circle, right side */}
