@@ -88,9 +88,9 @@ function shortfallNode(
   gate:      FractionValue,
 ): string {
   const bracket = computeShortfallBracket(placed, gate)
-  if (bracket === 'empty')    return 'CHECK_ERROR_EMPTY'
-  if (bracket === 'one_unit') return 'CHECK_ERROR_ONE_UNIT'
-  return 'CHECK_ERROR_PARTIAL'
+  if (bracket === 'empty')    return 'CHECK_ERROR_SHORT_1_EMPTY'
+  if (bracket === 'one_unit') return 'CHECK_ERROR_SHORT_1_ONE_UNIT'
+  return 'CHECK_ERROR_SHORT_1_PARTIAL'
 }
 
 function overflowNode(
@@ -99,9 +99,9 @@ function overflowNode(
   challengeIndex: number,
 ): string {
   const bracket = computeOverflowBracket(placed, gate, challengeIndex)
-  if (bracket === 'whole_log') return 'CHECK_ERROR_WHOLE_LOG'
-  if (bracket === 'decoy_c2') return 'CHECK_ERROR_DECOY'
-  return 'CHECK_ERROR_OVERFLOW'
+  if (bracket === 'whole_log') return 'CHECK_ERROR_LONG_1_WHOLE'
+  if (bracket === 'decoy_c2') return 'CHECK_ERROR_LONG_1_DECOY_C2'
+  return 'CHECK_ERROR_LONG_1_ONE_UNIT'
 }
 
 // ── Log entry helpers ──────────────────────────────────────────────────────
@@ -340,12 +340,13 @@ export function lessonReducer(state: LessonState, event: LessonEvent): LessonSta
           const challenge = CHECK_CHALLENGES[state.challengeIndex]
 
           if (isSolutionValid(placed, challenge)) {
+            const successNode = `CHECK_CORRECT_C${state.challengeIndex}`
             return appendLog({
               ...state,
               phase:          'CHECK_SUCCESS',
               challengesPassed: state.challengesPassed + 1,
               attemptCount:   0,
-              dialogueNodeId: 'CHECK_CORRECT',
+              dialogueNodeId: successNode,
             }, 'check_correct', true)
           }
 

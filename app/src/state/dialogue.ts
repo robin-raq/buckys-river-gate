@@ -1,0 +1,279 @@
+import type { DialogueNode } from './types'
+
+// ── Dialogue tree ──────────────────────────────────────────────────────────
+// All strings Bucky ever says. Validated at module load — any broken
+// nextNode reference throws before the first render.
+//
+// Navigation rules:
+//   autoAdvance   — component auto-advances after a short delay (no tap needed)
+//   tapToContinue — component waits for the student to tap
+//   nextNode      — the next node ID within the same phase chain
+//                   (FSM DIALOGUE_ADVANCE fires only when the chain ends)
+
+export const DIALOGUE: Record<string, DialogueNode> = {
+
+  // ── BOOT ─────────────────────────────────────────────────────────────────
+
+  BOOT_SCREEN: {
+    text:       "Bucky's River Gate",
+    buckyState: 'idle',
+  },
+
+  // ── EXPLORE ──────────────────────────────────────────────────────────────
+
+  EXPLORE_INTRO: {
+    text:       "Welcome, Builder! I'm Bucky! Tap a log to hear it sing, then drag it to Row 1. Try chopping the big ones!",
+    buckyState: 'excited',
+    tapToContinue: true,
+  },
+
+  EXPLORE_CHOP_PROMPT: {
+    text:       "Hold that log down — keep pressing — and it'll split right in half!",
+    buckyState: 'encouraging',
+    tapToContinue: true,
+  },
+
+  EXPLORE_DROP_PROMPT: {
+    text:       "Now drag it into the river! See how it fits?",
+    buckyState: 'excited',
+    tapToContinue: true,
+  },
+
+  EXPLORE_BUILD_PROMPT: {
+    text:       "Try building a long bridge with all your logs. What's the longest you can make?",
+    buckyState: 'excited',
+    tapToContinue: true,
+  },
+
+  EXPLORE_COMBINE_HINT: {
+    text:       "I wonder... if you line up two small logs, do they fill the same space as one big one?",
+    buckyState: 'thinking',
+    tapToContinue: true,
+  },
+
+  EXPLORE_END: {
+    text:       "Okay Builder, I've got a job for you! There's a gap in the dam — and logs are the only way to fix it!",
+    buckyState: 'excited',
+    autoAdvance: true,
+    nextNode:   'INSTRUCT_GATE_INTRO',
+  },
+
+  // ── INSTRUCT ─────────────────────────────────────────────────────────────
+
+  INSTRUCT_GATE_INTRO: {
+    text:       "See that blue line? That's how wide the gap is — exactly half the river. I need you to fill it perfectly. Not too much, not too little!",
+    buckyState: 'excited',
+    tapToContinue: true,
+    nextNode:   'INSTRUCT_BUILD_PROMPT',
+    highlightGap: true,
+  },
+
+  INSTRUCT_BUILD_PROMPT: {
+    text:       "Drag logs from the tray into Row 1. When it looks right, tap the CHECK button!",
+    buckyState: 'encouraging',
+    tapToContinue: true,
+  },
+
+  INSTRUCT_CORRECT: {
+    text:       "You filled it! Two quarter logs — see how they stick together like one half log? That's the trick!",
+    buckyState: 'excited',
+    autoAdvance: true,
+    nextNode:   'INSTRUCT_NAME_EQUIVALENCE',
+  },
+
+  INSTRUCT_NAME_EQUIVALENCE: {
+    text:       "Two-quarters and one-half are EQUIVALENT — they look different but fill the SAME space. Remember that word: equivalent!",
+    buckyState: 'celebrating',
+    tapToContinue: true,
+    nextNode:   'CHECK_INTRO',
+  },
+
+  // ── INSTRUCT errors ───────────────────────────────────────────────────────
+
+  INSTRUCT_ERROR_SHORT: {
+    text:       "Not quite — there's still some blue showing! Look at how much gap is left and find a log that fills it.",
+    buckyState: 'encouraging',
+    tapToContinue: true,
+    nextNode:   'INSTRUCT_BUILD_PROMPT',
+    highlightGap: true,
+  },
+
+  INSTRUCT_ERROR_LONG: {
+    text:       "Whoa — those logs stick out past the blue line! That's a bit too much wood. Try taking one back.",
+    buckyState: 'encouraging',
+    tapToContinue: true,
+    nextNode:   'INSTRUCT_BUILD_PROMPT',
+    highlightOverflow: true,
+  },
+
+  INSTRUCT_ERROR_WRONG_TYPE: {
+    text:       "That half log fills the gap — but this lesson is about using TWO quarter logs. Can you swap it for the small ones?",
+    buckyState: 'encouraging',
+    tapToContinue: true,
+    nextNode:   'INSTRUCT_BUILD_PROMPT',
+  },
+
+  INSTRUCT_ERROR_TOO_MANY: {
+    text:       "Let's slow down and look at this together one more time.",
+    buckyState: 'disappointed',
+    autoAdvance: true,
+    nextNode:   'INSTRUCT_GATE_INTRO',
+  },
+
+  // ── CHECK ─────────────────────────────────────────────────────────────────
+
+  CHECK_INTRO: {
+    text:       "Now you try on your own! Three gaps, three chances. I'll be right here if you get stuck!",
+    buckyState: 'excited',
+    tapToContinue: true,
+    nextNode:   'CHECK_CHALLENGE_START',
+  },
+
+  CHECK_CHALLENGE_START: {
+    text:       "Ready? Look at the blue gate line. Drag logs to fill the gap — then CHECK!",
+    buckyState: 'thinking',
+    tapToContinue: true,
+  },
+
+  // ── CHECK success nodes ───────────────────────────────────────────────────
+
+  CHECK_CORRECT_C0: {
+    text:       "You helped me earlier — can you build a 1/2 gap again? Any way you like! Brilliant — you filled it perfectly!",
+    buckyState: 'excited',
+    autoAdvance: true,
+    nextNode:   'CHECK_CHALLENGE_START',
+  },
+
+  CHECK_CORRECT_C1: {
+    text:       "Three-quarters with three small logs — or half plus a quarter! Either way works! You're thinking like an engineer!",
+    buckyState: 'celebrating',
+    autoAdvance: true,
+    nextNode:   'CHECK_CHALLENGE_START',
+  },
+
+  CHECK_CORRECT_C2: {
+    text:       "You did it with only quarter logs! Two quarters, one half — same thing. Every time!",
+    buckyState: 'celebrating',
+    triggerBadge: true,
+    autoAdvance: true,
+    nextNode:   'WIN_SEQUENCE',
+  },
+
+  // ── CHECK error — too short ────────────────────────────────────────────────
+
+  CHECK_ERROR_SHORT_1_EMPTY: {
+    text:       "The gate is empty, Builder! Drag logs from the tray to Row 1. Fill from the left edge all the way to the blue line.",
+    buckyState: 'encouraging',
+    tapToContinue: true,
+    highlightGap: true,
+    nextNode:   'CHECK_CHALLENGE_START',
+  },
+
+  CHECK_ERROR_SHORT_1_ONE_UNIT: {
+    text:       "Almost there! That gap on the right is about the size of one more quarter log. Add one little log to close it!",
+    buckyState: 'encouraging',
+    tapToContinue: true,
+    highlightDockMatch: true,
+    nextNode:   'CHECK_CHALLENGE_START',
+  },
+
+  CHECK_ERROR_SHORT_1_PARTIAL: {
+    text:       "You've got some logs in there — but look how much blue is still showing. That's still open river! Try adding more or swapping for a bigger log.",
+    buckyState: 'encouraging',
+    tapToContinue: true,
+    highlightGap: true,
+    nextNode:   'CHECK_CHALLENGE_START',
+  },
+
+  // ── CHECK error — too long ─────────────────────────────────────────────────
+
+  CHECK_ERROR_LONG_1_WHOLE: {
+    text:       "Oops — that log went way past the blue line! The whole log fills the entire river. Our gap is only half that wide. Can you find something smaller?",
+    buckyState: 'encouraging',
+    tapToContinue: true,
+    highlightOverflow: true,
+    nextNode:   'CHECK_CHALLENGE_START',
+  },
+
+  CHECK_ERROR_LONG_1_ONE_UNIT: {
+    text:       "You've got one too many! Your logs stick out past the line by about one quarter log. Try sliding the last one back to the tray.",
+    buckyState: 'encouraging',
+    tapToContinue: true,
+    highlightOverflow: true,
+    nextNode:   'CHECK_CHALLENGE_START',
+  },
+
+  CHECK_ERROR_LONG_1_DECOY_C2: {
+    text:       "Three of them is too many for a half gap! You know two quarters make a half — try taking one back.",
+    buckyState: 'encouraging',
+    tapToContinue: true,
+    highlightOverflow: true,
+    nextNode:   'CHECK_CHALLENGE_START',
+  },
+
+  // ── CHECK error — second attempt ──────────────────────────────────────────
+
+  CHECK_ERROR_2_GHOST: {
+    text:       "Let me show you a trick — I'm drawing a half log over the gate so you can see the size. How many small ones does it take to match that ghost log?",
+    buckyState: 'disappointed',
+    showGhostOverlay: true,
+    tapToContinue: true,
+    nextNode:   'CHECK_ERROR_2_RESTART',
+  },
+
+  CHECK_ERROR_2_RESTART: {
+    text:       "Let's go back and look at the blocks together one more time.",
+    buckyState: 'disappointed',
+    autoAdvance: true,
+    nextNode:   'INSTRUCT_GATE_INTRO',
+  },
+
+  // ── Intervention (5+ total failures) ──────────────────────────────────────
+
+  CHECK_INTERVENTION: {
+    text:       "You know what — let's build it together one time so you can feel it. Watch...",
+    buckyState: 'encouraging',
+    triggerDemoAnim: true,
+    autoAdvance: true,
+    nextNode:   'CHECK_CHALLENGE_START',
+  },
+
+  // ── WIN ───────────────────────────────────────────────────────────────────
+
+  WIN_SEQUENCE: {
+    text:       "LEGENDARY BUILDER! You figured out that 1/2 and 2/4 are the SAME thing — just split differently! That's called an equivalent fraction, and mathematicians use that trick their whole lives.",
+    buckyState: 'celebrating',
+    triggerWin:  true,
+  },
+}
+
+// ── Public API ─────────────────────────────────────────────────────────────
+
+/**
+ * Returns the DialogueNode for the given ID.
+ * Throws a descriptive error if the ID doesn't exist — prefer this over
+ * direct DIALOGUE[id] access so bad IDs surface immediately.
+ */
+export function getNode(id: string): DialogueNode {
+  const node = DIALOGUE[id]
+  if (!node) throw new Error(`[dialogue] Unknown node ID: "${id}"`)
+  return node
+}
+
+/**
+ * Validates the entire dialogue tree at startup.
+ * Throws if any nextNode reference points to a missing key.
+ * Call once inside a module-level block so tests and the real app both benefit.
+ */
+export function validateDialogueTree(): void {
+  for (const [id, node] of Object.entries(DIALOGUE)) {
+    if (node.nextNode !== undefined && !(node.nextNode in DIALOGUE)) {
+      throw new Error(
+        `[dialogue] Node "${id}" has broken nextNode reference: "${node.nextNode}" — no such key in DIALOGUE`
+      )
+    }
+  }
+}
+
+// Run on import — catches broken refs before the first render
+validateDialogueTree()
