@@ -430,6 +430,20 @@ describe('CHECK_ACTIVE phase', () => {
       expect(s.phase).toBe('CHECK_ERROR_1')
       expect(s.attemptCount).toBe(1)
     })
+
+    it('too_short error sets errorType to "too_short"', () => {
+      let s = snapBlocks(checkActiveAt(0), [4])
+      s = dispatch(s, { type: 'CHECK_SUBMIT' })
+      expect(s.errorType).toBe('too_short')
+    })
+
+    it('too_long error sets errorType to "too_long"', () => {
+      // Challenge 2: gate=1/2, inventory=[1/4,1/4,1/4]. Snap all 3 → 3/4 > 1/2
+      let s = snapBlocks(checkActiveAt(2), [4, 4, 4])
+      s = dispatch(s, { type: 'CHECK_SUBMIT' })
+      expect(s.phase).toBe('CHECK_ERROR_1')
+      expect(s.errorType).toBe('too_long')
+    })
   })
 
   describe('Challenge 1 — gate 3/4', () => {

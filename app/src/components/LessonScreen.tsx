@@ -159,9 +159,6 @@ export function LessonScreen({ state, dispatch }: Props) {
           </button>
         )}
 
-        <span style={{ fontSize: '0.7rem', opacity: 0.4, flexShrink: 0 }}>
-          {state.phase}
-        </span>
       </div>
 
       {/* ── Bucky dialogue ─────────────────────────────────────────────── */}

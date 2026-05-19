@@ -429,16 +429,19 @@ export function lessonReducer(state: LessonState, event: LessonEvent): LessonSta
               phase:         'CHECK_ERROR_1',
               attemptCount:  1,
               totalAttempts: newTotalAttempts,
+              errorType:     result === 'too_short' ? 'too_short' : 'too_long',
               dialogueNodeId: node,
             }
           }
 
           // Second error — ghost overlay hint, then back to INSTRUCT
+          const result2 = validateBuildZone(placed, state.referenceGate)
           return {
             ...state,
             phase:         'CHECK_ERROR_2',
             attemptCount:  state.attemptCount + 1,
             totalAttempts: newTotalAttempts,
+            errorType:     result2 === 'too_short' ? 'too_short' : 'too_long',
             dialogueNodeId: 'CHECK_ERROR_2_GHOST',
           }
         }

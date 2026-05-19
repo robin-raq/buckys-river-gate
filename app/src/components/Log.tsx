@@ -1,6 +1,7 @@
 import type { Dispatch } from 'react'
 import type { BlockState } from '../state/types'
 import type { LessonEvent } from '../state/lessonEvents'
+import { playChopSound, playBonkSound, playFractionTone } from '../audio/toneEngine'
 
 interface LogProps {
   block:    BlockState
@@ -14,11 +15,32 @@ const LOG_COLORS: Record<number, string> = {
   4: 'var(--log-quarter, #C49A6C)',
 }
 
-export function Log({ block, dispatch: _dispatch }: LogProps) {
+export function Log({ block, dispatch }: LogProps) {
   const color = LOG_COLORS[block.denominator] ?? LOG_COLORS[4]
 
   // Fraction label: "1/2", "1/4", "1/1"
   const fractionLabel = `${block.numerator}/${block.denominator}`
+
+  // Chop: only splittable logs in the build zone respond to clicks.
+  // Locked logs (demo) and dock logs never chop.
+  function handleClick() {
+    if (block.locked || block.zone !== 'build') return
+    if (block.splittable) {
+      const children: [typeof block, typeof block] = [
+        { ...block, denominator: block.denominator * 2 },
+        { ...block, denominator: block.denominator * 2 },
+      ]
+      playChopSound([
+        { numerator: children[0].numerator, denominator: children[0].denominator },
+        { numerator: children[1].numerator, denominator: children[1].denominator },
+      ])
+      dispatch({ type: 'CHOP', blockId: block.id })
+    } else {
+      // Quarter logs can't be chopped — play bonk + fraction tone as feedback
+      playBonkSound()
+      playFractionTone({ numerator: block.numerator, denominator: block.denominator })
+    }
+  }
 
   return (
     <div
@@ -28,7 +50,8 @@ export function Log({ block, dispatch: _dispatch }: LogProps) {
       data-zone={block.zone}
       data-splittable={String(block.splittable)}
       data-locked={String(block.locked)}
-      aria-label={`${fractionLabel} log`}
+      aria-label={`${fractionLabel} log${block.splittable && block.zone === 'build' ? ' — tap to chop' : ''}`}
+      onClick={handleClick}
       style={{
         width:          `${block.pixelWidth}px`,
         height:         '72px',
@@ -37,7 +60,7 @@ export function Log({ block, dispatch: _dispatch }: LogProps) {
         display:        'flex',
         alignItems:     'center',
         justifyContent: 'center',
-        cursor:         block.locked ? 'default' : 'grab',
+        cursor:         block.locked ? 'default' : block.splittable && block.zone === 'build' ? 'pointer' : 'grab',
         userSelect:     'none',
         touchAction:    'none',
         border:         block.selected ? '3px solid var(--success-glow, #34D399)' : '3px solid transparent',
