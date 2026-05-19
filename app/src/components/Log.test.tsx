@@ -1,7 +1,28 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeAll } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { Log } from './Log'
 import type { BlockState } from '../state/types'
+
+// Stub AudioContext so toneEngine doesn't throw in jsdom
+beforeAll(() => {
+  const mockComp = { connect: vi.fn() }
+  const mockCtx  = {
+    state: 'running' as AudioContextState,
+    destination: {} as AudioDestinationNode,
+    currentTime: 0,
+    resume: vi.fn().mockResolvedValue(undefined),
+    createOscillator: vi.fn(() => ({
+      type: 'sine', frequency: { value: 0, linearRampToValueAtTime: vi.fn() },
+      connect: vi.fn(), start: vi.fn(), stop: vi.fn(),
+    })),
+    createGain: vi.fn(() => ({
+      gain: { value: 1, setTargetAtTime: vi.fn() }, connect: vi.fn(),
+    })),
+    createDynamicsCompressor: vi.fn(() => mockComp),
+  }
+  vi.stubGlobal('AudioContext', vi.fn(function() { return mockCtx }))
+})
 
 const makeBlock = (overrides: Partial<BlockState> = {}): BlockState => ({
   id:          'test-block-1',
@@ -63,5 +84,49 @@ describe('Log', () => {
     render(<Log block={makeBlock({ numerator: 1, denominator: 4 })} dispatch={vi.fn()} />)
     // Should have "1/4" somewhere in the log label
     expect(screen.getByText(/1\/4|¼/)).toBeInTheDocument()
+  })
+})
+
+// ── Double-tap to chop ──────────────────────────────────────────────────────
+
+describe('Log double-tap chop', () => {
+  const buildSplittable = makeBlock({ zone: 'build', splittable: true })
+  const buildQuarter    = makeBlock({ zone: 'build', splittable: false, denominator: 4 })
+  const dockSplittable  = makeBlock({ zone: 'dock',  splittable: true })
+  const lockedBuild     = makeBlock({ zone: 'build', splittable: true, locked: true })
+
+  it('double-tap on splittable build log dispatches CHOP', async () => {
+    const dispatch = vi.fn()
+    render(<Log block={buildSplittable} dispatch={dispatch} />)
+    await userEvent.dblClick(screen.getByTestId('log-test-block-1'))
+    expect(dispatch).toHaveBeenCalledWith({ type: 'CHOP', blockId: 'test-block-1' })
+  })
+
+  it('single tap on build log does NOT dispatch CHOP', async () => {
+    const dispatch = vi.fn()
+    render(<Log block={buildSplittable} dispatch={dispatch} />)
+    await userEvent.click(screen.getByTestId('log-test-block-1'))
+    expect(dispatch).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'CHOP' }))
+  })
+
+  it('double-tap on dock log does NOT dispatch CHOP (drag handles placement)', async () => {
+    const dispatch = vi.fn()
+    render(<Log block={dockSplittable} dispatch={dispatch} />)
+    await userEvent.dblClick(screen.getByTestId('log-test-block-1'))
+    expect(dispatch).not.toHaveBeenCalled()
+  })
+
+  it('double-tap on locked log does NOT dispatch CHOP (demo blocks)', async () => {
+    const dispatch = vi.fn()
+    render(<Log block={lockedBuild} dispatch={dispatch} />)
+    await userEvent.dblClick(screen.getByTestId('log-test-block-1'))
+    expect(dispatch).not.toHaveBeenCalled()
+  })
+
+  it('double-tap on unsplittable (quarter) build log does NOT dispatch CHOP', async () => {
+    const dispatch = vi.fn()
+    render(<Log block={buildQuarter} dispatch={dispatch} />)
+    await userEvent.dblClick(screen.getByTestId('log-test-block-1'))
+    expect(dispatch).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'CHOP' }))
   })
 })

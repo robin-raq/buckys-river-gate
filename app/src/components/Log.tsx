@@ -1,7 +1,9 @@
-import type { Dispatch } from 'react'
+import { useRef, type Dispatch } from 'react'
 import type { BlockState } from '../state/types'
 import type { LessonEvent } from '../state/lessonEvents'
 import { playChopSound, playBonkSound, playFractionTone } from '../audio/toneEngine'
+
+const DOUBLE_TAP_MS = 300   // two taps within 300 ms = double-tap
 
 interface LogProps {
   block:    BlockState
@@ -16,27 +18,33 @@ const LOG_COLORS: Record<number, string> = {
 }
 
 export function Log({ block, dispatch }: LogProps) {
-  const color = LOG_COLORS[block.denominator] ?? LOG_COLORS[4]
+  const color       = LOG_COLORS[block.denominator] ?? LOG_COLORS[4]
+  const lastTapRef  = useRef<number>(0)
 
   // Fraction label: "1/2", "1/4", "1/1"
   const fractionLabel = `${block.numerator}/${block.denominator}`
 
-  // Chop: only splittable logs in the build zone respond to clicks.
-  // Locked logs (demo) and dock logs never chop.
+  // Double-tap to chop: only splittable build-zone logs respond.
+  // Locked logs (demo) and dock logs are silent.
   function handleClick() {
+    const now = Date.now()
+    const gap = now - lastTapRef.current
+    lastTapRef.current = now
+
+    // First tap of a potential double-tap — wait for the second
+    if (gap > DOUBLE_TAP_MS) return
+
     if (block.locked || block.zone !== 'build') return
+
     if (block.splittable) {
-      const children: [typeof block, typeof block] = [
-        { ...block, denominator: block.denominator * 2 },
-        { ...block, denominator: block.denominator * 2 },
-      ]
+      const childDenom = block.denominator * 2
       playChopSound([
-        { numerator: children[0].numerator, denominator: children[0].denominator },
-        { numerator: children[1].numerator, denominator: children[1].denominator },
+        { numerator: block.numerator, denominator: childDenom },
+        { numerator: block.numerator, denominator: childDenom },
       ])
       dispatch({ type: 'CHOP', blockId: block.id })
     } else {
-      // Quarter logs can't be chopped — play bonk + fraction tone as feedback
+      // Quarter logs can't be chopped — bonk feedback
       playBonkSound()
       playFractionTone({ numerator: block.numerator, denominator: block.denominator })
     }
