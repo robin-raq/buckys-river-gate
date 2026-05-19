@@ -1,4 +1,4 @@
-import { useEffect, useRef, type Dispatch } from 'react'
+import { useEffect, useRef, useState, type Dispatch } from 'react'
 import type { LessonState } from '../state/types'
 import type { LessonEvent } from '../state/lessonEvents'
 import { getNode }              from '../state/dialogue'
@@ -53,6 +53,21 @@ export function LessonScreen({ state, dispatch }: Props) {
   const { numerator: gn, denominator: gd } = state.referenceGate
   const gateLabel = `← ${gn}/${gd} →`
 
+  // ── Drag state ───────────────────────────────────────────────────────────
+  // Tracks the log being dragged from the tray. `moved` flips true once the
+  // pointer travels > 8px — used to distinguish a tap from a real drag.
+  const [dragging, setDragging] = useState<{
+    blockId: string
+    x: number; y: number         // current pointer position (viewport coords)
+    startX: number; startY: number
+    moved: boolean
+  } | null>(null)
+
+  const riverRowRef  = useRef<HTMLDivElement>(null)
+  const draggedBlock = dragging
+    ? state.blocks.find(b => b.id === dragging.blockId)
+    : null
+
   // ── EXPLORE timeout ──────────────────────────────────────────────────────
   const exploreTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
@@ -84,6 +99,41 @@ export function LessonScreen({ state, dispatch }: Props) {
     }
   }, [state.phase]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Drag handlers ────────────────────────────────────────────────────────
+
+  function handleTrayPointerDown(e: React.PointerEvent, blockId: string) {
+    // Don't start a drag during the demo — tray is hidden, but defensive
+    if (isDemo) return
+    e.preventDefault()
+    setDragging({ blockId, x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY, moved: false })
+  }
+
+  function handlePointerMove(e: React.PointerEvent) {
+    if (!dragging) return
+    const dx = Math.abs(e.clientX - dragging.startX)
+    const dy = Math.abs(e.clientY - dragging.startY)
+    setDragging({ ...dragging, x: e.clientX, y: e.clientY, moved: dx > 8 || dy > 8 })
+  }
+
+  function handlePointerUp(e: React.PointerEvent) {
+    if (!dragging || !draggedBlock) { setDragging(null); return }
+
+    const riverRect = riverRowRef.current?.getBoundingClientRect()
+    const overRiver = riverRect &&
+      e.clientX >= riverRect.left && e.clientX <= riverRect.right &&
+      e.clientY >= riverRect.top  && e.clientY <= riverRect.bottom
+
+    // Place if dropped on river OR tapped without dragging
+    if (overRiver || !dragging.moved) {
+      unlockAudio()
+      playSnapSound()
+      playFractionTone({ numerator: draggedBlock.numerator, denominator: draggedBlock.denominator })
+      dispatch({ type: 'LOG_SNAPPED', blockId: dragging.blockId, slot: state.buildZoneLogs.length })
+    }
+
+    setDragging(null)
+  }
+
   // ── Dialogue advance ─────────────────────────────────────────────────────
   function advance() { dispatch({ type: 'DIALOGUE_ADVANCE' }) }
 
@@ -110,16 +160,19 @@ export function LessonScreen({ state, dispatch }: Props) {
   }, [])
 
   return (
-    <div style={{
-      display:       'flex',
-      flexDirection: 'column',
-      height:        '100dvh',
-      background:    'var(--bg-deep)',
-      color:         'var(--ui-text)',
-      fontFamily:    'system-ui, sans-serif',
-      overflow:      'hidden',
-      touchAction:   'manipulation',
-    }}>
+    <div
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      style={{
+        display:       'flex',
+        flexDirection: 'column',
+        height:        '100dvh',
+        background:    'var(--bg-deep)',
+        color:         'var(--ui-text)',
+        fontFamily:    'system-ui, sans-serif',
+        overflow:      'hidden',
+        touchAction:   'none',   // prevent browser pan during log drag
+      }}>
 
       {/* ── Top bar ───────────────────────────────────────────────────── */}
       <div style={{
@@ -256,7 +309,7 @@ export function LessonScreen({ state, dispatch }: Props) {
           )}
 
           {/* River row — always shown so logs have somewhere to land */}
-          <div style={{
+          <div ref={riverRowRef} style={{
             width:        `${RIVER_WIDTH_PX}px`,
             height:       '80px',
             background:   'var(--river-water)',
@@ -382,22 +435,20 @@ export function LessonScreen({ state, dispatch }: Props) {
         </span>
 
         {dockBlocks.map(b => (
-          <button
+          <div
             key={b.id}
-            onClick={() => {
-              unlockAudio()   // belt-and-suspenders for iOS mid-session resume
-              playSnapSound()
-              playFractionTone({ numerator: b.numerator, denominator: b.denominator })
-              dispatch({ type: 'LOG_SNAPPED', blockId: b.id, slot: state.buildZoneLogs.length })
-            }}
+            onPointerDown={(e) => handleTrayPointerDown(e, b.id)}
             style={{
-              background: 'none', border: 'none', padding: 0,
-              cursor: 'pointer', flexShrink: 0,
+              cursor:    'grab',
+              flexShrink: 0,
+              // Dim the source log while it's being dragged
+              opacity:   dragging?.blockId === b.id ? 0.35 : 1,
+              transition: 'opacity 0.1s',
             }}
-            title={`Place ${b.numerator}/${b.denominator} log`}
+            title={`Drag to place ${b.numerator}/${b.denominator} log`}
           >
             <Log block={b} dispatch={dispatch} />
-          </button>
+          </div>
         ))}
 
         {dockBlocks.length === 0 && (
@@ -433,6 +484,23 @@ export function LessonScreen({ state, dispatch }: Props) {
           </button>
         )}
       </div>}
+
+      {/* ── Drag ghost ─────────────────────────────────────────────────── */}
+      {/* Rendered fixed so it escapes all overflow and scale transforms.  */}
+      {dragging?.moved && draggedBlock && (
+        <div style={{
+          position:     'fixed',
+          left:         dragging.x - draggedBlock.pixelWidth / 2,
+          top:          dragging.y - 36,
+          pointerEvents: 'none',
+          zIndex:        200,
+          opacity:       0.85,
+          transform:     'scale(1.08)',
+          filter:        'drop-shadow(0 4px 12px rgba(0,0,0,0.5))',
+        }}>
+          <Log block={draggedBlock} dispatch={() => {}} />
+        </div>
+      )}
     </div>
   )
 }
