@@ -1,11 +1,72 @@
-/* Bucky avatar — state animations (Phase 1 emoji fallback) */
+/* Bucky avatar — illustrated beaver + state animations */
 
 .bucky-avatar {
-  background: rgba(254, 252, 232, 0.12);
-  border: 2px solid rgba(254, 252, 232, 0.25);
+  background: radial-gradient(circle at 50% 35%, #3d2817 0%, #1a1208 100%);
+  border: 3px solid #fbbf24;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* ── Keyframes ─────────────────────────────────────────────────────────── */
+.bucky-art {
+  width: 88%;
+  height: 88%;
+  display: block;
+}
+
+/* ── Default visibility ─────────────────────────────────────────────────── */
+
+.bucky-art__mouth--frown,
+.bucky-art__axe,
+.bucky-art__log,
+.bucky-art__thumb,
+.bucky-art__sparkles {
+  display: none;
+}
+
+.bucky-art__mouth--smile {
+  display: block;
+}
+
+/* ── State-specific art ───────────────────────────────────────────────────── */
+
+.bucky-art--disappointed .bucky-art__mouth--smile {
+  display: none;
+}
+
+.bucky-art--disappointed .bucky-art__mouth--frown {
+  display: block;
+}
+
+.bucky-art--chop-swing .bucky-art__axe {
+  display: block;
+}
+
+.bucky-art--build-stack .bucky-art__log {
+  display: block;
+}
+
+.bucky-art--encouraging .bucky-art__thumb {
+  display: block;
+}
+
+.bucky-art--celebrating .bucky-art__sparkles {
+  display: block;
+}
+
+.bucky-art--celebrating .bucky-art__sparkles text {
+  fill: #fbbf24;
+}
+
+.bucky-art--excited .bucky-art__eye {
+  transform-origin: center;
+  animation: bucky-excited-blink 0.6s ease-in-out infinite;
+}
+
+/* ── Keyframes (container + parts) ────────────────────────────────────────── */
 
 @keyframes bucky-idle-bounce {
   0%, 100% { transform: translateY(0); }
@@ -14,36 +75,48 @@
 
 @keyframes bucky-excited-pulse {
   0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.08); }
+  50%      { transform: scale(1.06); }
+}
+
+@keyframes bucky-excited-blink {
+  0%, 90%, 100% { transform: scaleY(1); }
+  95%           { transform: scaleY(0.15); }
 }
 
 @keyframes bucky-thinking-tilt {
   0%, 100% { transform: rotate(0deg); }
-  25%      { transform: rotate(-6deg); }
-  75%      { transform: rotate(6deg); }
+  25%      { transform: rotate(-5deg); }
+  75%      { transform: rotate(5deg); }
 }
 
 @keyframes bucky-chop-swing {
   0%   { transform: rotate(0deg); }
-  40%  { transform: rotate(-18deg); }
-  70%  { transform: rotate(12deg); }
+  40%  { transform: rotate(-6deg); }
+  70%  { transform: rotate(4deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes bucky-arm-chop {
+  0%   { transform: rotate(0deg); }
+  35%  { transform: rotate(-42deg); }
+  65%  { transform: rotate(8deg); }
   100% { transform: rotate(0deg); }
 }
 
 @keyframes bucky-build-stack {
   0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-6px) scale(1.02); }
+  50%      { transform: translateY(-5px); }
 }
 
 @keyframes bucky-celebrating-hop {
   0%, 100% { transform: translateY(0) scale(1); }
-  30%      { transform: translateY(-10px) scale(1.05); }
-  60%      { transform: translateY(-4px) scale(1.02); }
+  30%      { transform: translateY(-8px) scale(1.04); }
+  60%      { transform: translateY(-3px) scale(1.02); }
 }
 
 @keyframes bucky-disappointed-slump {
   0%, 100% { transform: translateY(0) rotate(0deg); }
-  50%      { transform: translateY(3px) rotate(-4deg); }
+  50%      { transform: translateY(4px) rotate(-3deg); }
 }
 
 @keyframes bucky-encouraging-nod {
@@ -52,7 +125,7 @@
   55%      { transform: translateY(-2px); }
 }
 
-/* ── State classes ─────────────────────────────────────────────────────── */
+/* ── State classes on avatar wrapper ──────────────────────────────────────── */
 
 .bucky--idle {
   animation: bucky-idle-bounce 2.4s ease-in-out infinite;
@@ -66,8 +139,17 @@
   animation: bucky-thinking-tilt 2s ease-in-out infinite;
 }
 
+.bucky--thinking .bucky-art__arm-right {
+  transform: translate(-4px, -6px);
+}
+
 .bucky--chop-swing {
-  animation: bucky-chop-swing 0.5s ease-in-out infinite;
+  animation: bucky-chop-swing 0.55s ease-in-out infinite;
+}
+
+.bucky--chop-swing .bucky-art__arm-left {
+  transform-origin: 18px 44px;
+  animation: bucky-arm-chop 0.55s ease-in-out infinite;
 }
 
 .bucky--build-stack {
@@ -90,7 +172,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .bucky-avatar,
-  .bucky-avatar[class*='bucky--'] {
+  .bucky-avatar[class*='bucky--'],
+  .bucky-art__eye,
+  .bucky-art__arm-left {
     animation: none !important;
   }
 }

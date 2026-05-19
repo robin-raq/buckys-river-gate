@@ -36,8 +36,14 @@ describe('BuckyAvatar', () => {
     expect(avatar.className).toContain('extra-class')
   })
 
-  it('renders the beaver emoji for the current state', () => {
-    render(<BuckyAvatar buckyState="excited" />)
-    expect(screen.getByTestId('bucky-avatar')).toHaveTextContent('😄')
+  it('renders illustrated beaver SVG instead of emoji', () => {
+    const { container } = render(<BuckyAvatar buckyState="excited" />)
+    expect(screen.getByTestId('bucky-beaver-art')).toBeInTheDocument()
+    expect(container.textContent).not.toMatch(/🦫|😄|🤔/)
+  })
+
+  it('respects custom size prop', () => {
+    render(<BuckyAvatar buckyState="idle" size={96} />)
+    expect(screen.getByTestId('bucky-avatar')).toHaveStyle({ width: '96px', height: '96px' })
   })
 })
