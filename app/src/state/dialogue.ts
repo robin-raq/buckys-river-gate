@@ -68,34 +68,33 @@ export const DIALOGUE: Record<string, DialogueNode> = {
 
   // ── EXPLORE ──────────────────────────────────────────────────────────────
 
+  // EXPLORE nodes: tapToContinue is intentionally absent — DIALOGUE_ADVANCE is
+  // not handled in the EXPLORE reducer phase. Free play guidance comes from
+  // ambient Bucky text only; the "Ready! →" button in the header exits EXPLORE.
+
   EXPLORE_INTRO: {
     text:       "Now YOU try! Drag a log into the river. Double-tap the half log to chop it — see what happens!",
     buckyState: 'excited',
-    tapToContinue: true,
   },
 
   EXPLORE_CHOP_PROMPT: {
     text:       "Hold that log down — keep pressing — and it'll split right in half!",
     buckyState: 'encouraging',
-    tapToContinue: true,
   },
 
   EXPLORE_DROP_PROMPT: {
     text:       "Now drag it into the river! See how it fits?",
     buckyState: 'excited',
-    tapToContinue: true,
   },
 
   EXPLORE_BUILD_PROMPT: {
     text:       "Try building a long bridge with all your logs. What's the longest you can make?",
     buckyState: 'excited',
-    tapToContinue: true,
   },
 
   EXPLORE_COMBINE_HINT: {
     text:       "I wonder... if you line up two small logs, do they fill the same space as one big one?",
     buckyState: 'thinking',
-    tapToContinue: true,
   },
 
   EXPLORE_END: {
@@ -176,30 +175,31 @@ export const DIALOGUE: Record<string, DialogueNode> = {
     nextNode:   'CHECK_CHALLENGE_START',
   },
 
+  // tapToContinue intentionally absent — DIALOGUE_ADVANCE is not handled in
+  // CHECK_ACTIVE. Student just reads the hint and starts dragging logs.
   CHECK_CHALLENGE_START: {
     text:       "Ready? Look at the blue gate line. Drag logs to fill the gap — then CHECK!",
     buckyState: 'thinking',
-    tapToContinue: true,
   },
 
   // ── CHECK success nodes ───────────────────────────────────────────────────
 
   CHECK_CORRECT_C0: {
-    text:       "You helped me earlier — can you build a 1/2 gap again? Any way you like! Brilliant — you filled it perfectly!",
+    text:       "Perfect seal! One quarter log filled the whole gap. When the leak is this small, you only need one small log.",
     buckyState: 'excited',
     autoAdvance: true,
     nextNode:   'CHECK_CHALLENGE_START',
   },
 
   CHECK_CORRECT_C1: {
-    text:       "Three-quarters with three small logs — or half plus a quarter! Either way works! You're thinking like an engineer!",
+    text:       "Brilliant! One half log or two quarter logs — same river space! Different pieces, same width.",
     buckyState: 'celebrating',
     autoAdvance: true,
     nextNode:   'CHECK_CHALLENGE_START',
   },
 
   CHECK_CORRECT_C2: {
-    text:       "You did it with only quarter logs! Two quarters, one half — same thing. Every time!",
+    text:       "Three-quarters with three small logs — or half plus a quarter! Either way works! You're thinking like an engineer!",
     buckyState: 'celebrating',
     triggerBadge: true,
     autoAdvance: true,
