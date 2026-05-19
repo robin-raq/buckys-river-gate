@@ -193,11 +193,12 @@ export function LessonScreen({ state, dispatch }: Props) {
         height:        '100dvh',
         background:    'var(--bg-deep)',
         color:         'var(--ui-text)',
-        fontFamily:    'system-ui, sans-serif',
+        fontFamily:    "'Fredoka', 'Nunito', system-ui, sans-serif",
         overflow:      'hidden',
-        touchAction:   'none',   // prevent browser pan during log drag
+        touchAction:   'none',
       }}>
 
+      {/* ── Top bar ───────────────────────────────────────────────────────── */}
       <TopBar
         trailing={
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
@@ -205,95 +206,42 @@ export function LessonScreen({ state, dispatch }: Props) {
             {isCheckPhase && (
               <ChallengeCounter current={state.challengeIndex + 1} total={3} />
             )}
-            {isExplore && (
-              <button
-                type="button"
-                onClick={() => dispatch({ type: 'EXPLORE_COMPLETE' })}
-                style={{
-                  padding:      '0.3rem 0.8rem',
-                  fontSize:     '0.8rem',
-                  background:   'transparent',
-                  color:        'var(--ui-text)',
-                  border:       '1px solid var(--grid-line)',
-                  borderRadius: '0.4rem',
-                  cursor:       'pointer',
-                  opacity:      0.7,
-                }}
-              >
-                Ready! →
-              </button>
-            )}
           </div>
         }
       />
 
-      {/* ── Bucky dialogue ─────────────────────────────────────────────── */}
-      <div style={{
-        padding:    '0.6rem 1rem',
-        flexShrink: 0,
-        display:    'flex',
-        gap:        '0.6rem',
-        alignItems: 'flex-start',
-      }}>
-        <BuckyAvatar buckyState={node.buckyState} />
-
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <SpeechBubble
-            text={node.text}
-            onComplete={node.autoAdvance ? advance : undefined}
-          />
-          {node.tapToContinue && (
-            <button
-              onClick={advance}
-              style={{
-                marginTop:    '0.4rem',
-                padding:      '0.35rem 0.9rem',
-                fontSize:     '0.8rem',
-                background:   'transparent',
-                color:        'var(--ui-text)',
-                border:       '1px solid var(--grid-line)',
-                borderRadius: '0.4rem',
-                cursor:       'pointer',
-              }}
-            >
-              Tap to continue →
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ── River canvas (viewport-scaled) ─────────────────────────────── */}
+      {/* ── Game canvas — all game UI layered here ─────────────────────── */}
       <div
         ref={canvasRef}
         style={{
-          flex:           1,
-          width:          '100%',
-          overflow:       'hidden',
-          position:       'relative',
-          flexShrink:     1,
-          display:        'flex',
-          justifyContent: 'center',   // centres 960px canvas in wide viewports
+          flex:       1,
+          position:   'relative',
+          overflow:   'hidden',
+          display:    'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+        {/* Scene backdrop (sky, water, trees) */}
+        <RiverScene />
+
+        {/* Scaled river content — centred horizontally */}
         <div
           ref={scaleRef}
           style={{
-            width:          `${RIVER_WIDTH_PX}px`,
-            display:        'flex',
-            flexDirection:  'column',
-            alignItems:     'flex-start',
-            padding:        '1.5rem 0 0.75rem',
-            gap:            '0.5rem',
-            position:       'relative',
-            minHeight:      '320px',
+            width:         `${RIVER_WIDTH_PX}px`,
+            display:       'flex',
+            flexDirection: 'column',
+            alignItems:    'flex-start',
+            gap:           '0.5rem',
+            position:      'relative',
+            zIndex:        10,
+            padding:       '0 0 0.5rem',
           }}
         >
-          <EquivalenceBadge visible={showEquationBadge} equation={equationText} />
-          <RiverScene>
-          {/* Reference gate — only visible once introduced */}
+          {/* Reference gate */}
           {gateVisible && (
-            <div style={{ paddingTop: '0.5rem' }}>
+            <div style={{ paddingTop: '0.25rem' }}>
               <ReferenceGate
                 gate={state.referenceGate}
                 visible={true}
@@ -304,69 +252,59 @@ export function LessonScreen({ state, dispatch }: Props) {
             </div>
           )}
 
-          {/* Demo label — tells student this is Bucky's demonstration */}
-          {isDemo && (
-            <div style={{
-              fontSize:    '0.7rem',
-              opacity:     0.55,
-              letterSpacing: '0.08em',
-              paddingLeft: '0.25rem',
-              color:       'var(--ui-text)',
-            }}>
-              BUCKY'S DEMO ↓
-            </div>
-          )}
+          {/* River row */}
+          <div
+            ref={riverRowRef}
+            className="river-row"
+            style={{
+              position:     'relative',
+              width:        `${RIVER_WIDTH_PX}px`,
+              height:       '112px',
+              background:   'var(--river-water, #1a3a5c)',
+              borderRadius: '12px',
+              border:       '2px solid rgba(59,173,232,0.25)',
+              display:      'flex',
+              alignItems:   'center',
+              padding:      '6px',
+              gap:          '6px',
+              boxShadow:    'inset 0 2px 12px rgba(0,0,0,0.4)',
+            }}
+          >
+            {/* Grid guides — always visible during DEMO and build phases */}
+            <SnapGuides visible={isDemo || isBuildActive} />
 
-          {/* River row — always shown so logs have somewhere to land */}
-          <div ref={riverRowRef} className="river-row" style={{
-            position:     'relative',
-            width:        `${RIVER_WIDTH_PX}px`,
-            height:       '80px',
-            borderRadius: '8px',
-            display:      'flex',
-            alignItems:   'center',
-            padding:      '4px',
-            gap:          '4px',
-          }}>
-            <SnapGuides visible={isBuildActive && !isDemo} />
             {buildBlocks.length === 0 && !isDemo && (
-              <span style={{ opacity: 0.35, fontSize: '0.8rem', paddingLeft: '0.5rem' }}>
-                {isExplore
-                  ? 'Drag a log here — double-tap a placed log to chop'
-                  : isBuildActive
-                    ? 'Drag logs to fill the gap →'
-                    : ''}
+              <span style={{ opacity: 0.35, fontSize: '0.9rem', paddingLeft: '0.75rem', color: 'var(--ref-gate)' }}>
+                {isExplore ? 'Drag a log here →' : 'Drag logs to fill the gap →'}
               </span>
             )}
+
             {buildBlocks.map(b => (
-              // In DEMO: logs are read-only — no remove button, no interaction
               <div key={b.id} style={{ position: 'relative', flexShrink: 0 }}>
                 <Log block={b} dispatch={dispatch} />
                 {!isDemo && (
-                <button
-                  onClick={() => dispatch({ type: 'LOG_RETURNED', blockId: b.id })}
-                  style={{
-                    position:       'absolute',
-                    top:            '-10px',
-                    right:          '-10px',
-                    width:          '22px',
-                    height:         '22px',
-                    borderRadius:   '50%',
-                    background:     'var(--error-glow, #F87171)',
-                    border:         'none',
-                    color:          '#fff',
-                    fontSize:       '14px',
-                    fontWeight:     700,
-                    lineHeight:     '22px',
-                    textAlign:      'center',
-                    cursor:         'pointer',
-                    padding:        0,
-                    zIndex:         1,
-                  }}
-                  title="Return to tray"
-                >
-                  ×
-                </button>
+                  <button
+                    onClick={() => dispatch({ type: 'LOG_RETURNED', blockId: b.id })}
+                    style={{
+                      position:     'absolute',
+                      top:          '-8px',
+                      right:        '-8px',
+                      width:        '22px',
+                      height:       '22px',
+                      borderRadius: '50%',
+                      background:   'var(--error-glow, #F87171)',
+                      border:       'none',
+                      color:        '#fff',
+                      fontSize:     '14px',
+                      fontWeight:   700,
+                      lineHeight:   '22px',
+                      textAlign:    'center',
+                      cursor:       'pointer',
+                      padding:      0,
+                      zIndex:       1,
+                    }}
+                    title="Return to tray"
+                  >×</button>
                 )}
               </div>
             ))}
@@ -378,9 +316,29 @@ export function LessonScreen({ state, dispatch }: Props) {
             />
           </div>
 
-          {/* Check button */}
+          {/* Column numbers — 1  2  3  4 below the river */}
+          <div style={{ display: 'flex', width: `${RIVER_WIDTH_PX}px` }}>
+            {[1, 2, 3, 4].map(n => (
+              <div
+                key={n}
+                style={{
+                  width:      `${RIVER_WIDTH_PX / 4}px`,
+                  textAlign:  'center',
+                  fontSize:   '0.85rem',
+                  fontWeight: 600,
+                  opacity:    0.45,
+                  color:      'var(--ref-gate, #3BADE8)',
+                  userSelect: 'none',
+                }}
+              >
+                {n}
+              </div>
+            ))}
+          </div>
+
+          {/* Check button — below river in build phases */}
           {isBuildActive && (
-            <div style={{ paddingTop: '0.25rem', position: 'relative', zIndex: 2 }}>
+            <div style={{ paddingTop: '0.25rem', zIndex: 2, position: 'relative' }}>
               <CheckButton
                 label="CHECK"
                 disabled={!canSubmit}
@@ -388,15 +346,103 @@ export function LessonScreen({ state, dispatch }: Props) {
               />
             </div>
           )}
-          </RiverScene>
         </div>
 
+        {/* ── Overlaid UI — absolute-positioned on the game canvas ────── */}
+
+        {/* GOAL card — top left */}
         <GoalSidebar
           visible={goalVisible}
           gateLabel={gateLabel}
           gate={state.referenceGate}
         />
+
+        {/* FRACTION FACT card — left side during equation moments */}
+        <EquivalenceBadge visible={showEquationBadge} equation={equationText} />
+
+        {/* Speech bubble — top center, floating above river */}
+        <div style={{
+          position:        'absolute',
+          top:             '0.75rem',
+          left:            '50%',
+          transform:       'translateX(-50%)',
+          maxWidth:        '55%',
+          minWidth:        '320px',
+          zIndex:          30,
+          filter:          'drop-shadow(0 4px 16px rgba(0,0,0,0.5))',
+        }}>
+          <SpeechBubble
+            text={node.text}
+            onComplete={node.autoAdvance ? advance : undefined}
+          />
         </div>
+
+        {/* Bucky — bottom left, large */}
+        <div style={{
+          position:   'absolute',
+          bottom:     0,
+          left:       '1.5rem',
+          zIndex:     25,
+          fontSize:   '7rem',
+          lineHeight: 1,
+          userSelect: 'none',
+          filter:     'drop-shadow(0 4px 16px rgba(0,0,0,0.6))',
+        }}>
+          <BuckyAvatar buckyState={node.buckyState} />
+        </div>
+
+        {/* Next button — large green circle, right side */}
+        {node.tapToContinue && (
+          <button
+            onClick={advance}
+            aria-label="Continue"
+            style={{
+              position:     'absolute',
+              right:        '1.5rem',
+              bottom:       '30%',
+              width:        '72px',
+              height:       '72px',
+              borderRadius: '50%',
+              background:   'linear-gradient(135deg, #22c55e, #16a34a)',
+              border:       '3px solid rgba(255,255,255,0.3)',
+              color:        '#fff',
+              fontSize:     '2rem',
+              display:      'flex',
+              alignItems:   'center',
+              justifyContent: 'center',
+              cursor:       'pointer',
+              zIndex:       30,
+              boxShadow:    '0 4px 20px rgba(34,197,94,0.5)',
+              transition:   'transform 0.1s',
+            }}
+          >
+            ▶
+          </button>
+        )}
+
+        {/* EXPLORE: skip button — top right */}
+        {isExplore && (
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'EXPLORE_COMPLETE' })}
+            style={{
+              position:     'absolute',
+              top:          '0.75rem',
+              right:        '0.75rem',
+              padding:      '0.4rem 1rem',
+              fontSize:     '0.85rem',
+              background:   'rgba(255,255,255,0.12)',
+              color:        'var(--ui-text)',
+              border:       '1px solid rgba(255,255,255,0.2)',
+              borderRadius: '2rem',
+              cursor:       'pointer',
+              zIndex:       30,
+              backdropFilter: 'blur(4px)',
+            }}
+          >
+            Ready! →
+          </button>
+        )}
 
         {/* Win overlay */}
         {state.phase === 'WIN' && (
@@ -409,104 +455,106 @@ export function LessonScreen({ state, dispatch }: Props) {
             justifyContent: 'center',
             background:     'rgba(13,27,42,0.92)',
             gap:            '1rem',
+            zIndex:         50,
           }}>
-            <div style={{ fontSize: '4rem' }}>🎉</div>
-            <p style={{ fontSize: '1.1rem', textAlign: 'center', maxWidth: '360px', margin: 0 }}>
+            <div style={{ fontSize: '5rem' }}>🎉</div>
+            <p style={{ fontSize: '1.2rem', textAlign: 'center', maxWidth: '400px', margin: 0, fontWeight: 700 }}>
               {node.text}
             </p>
             <button
               onClick={() => dispatch({ type: 'PLAY_AGAIN' })}
               style={{
-                padding:      '0.75rem 2rem',
-                fontSize:     '1rem',
-                background:   'var(--success-glow)',
-                color:        '#0D1B2A',
+                padding:      '0.75rem 2.5rem',
+                fontSize:     '1.1rem',
+                background:   'linear-gradient(135deg, #22c55e, #16a34a)',
+                color:        '#fff',
                 border:       'none',
-                borderRadius: '0.75rem',
+                borderRadius: '2rem',
                 cursor:       'pointer',
+                fontWeight:   700,
+                boxShadow:    '0 4px 16px rgba(34,197,94,0.4)',
               }}
             >
-              Play Again
+              Play Again 🪵
             </button>
           </div>
         )}
       </div>
 
-      {/* ── Dock tray — hidden during DEMO (Bucky is demonstrating) ───── */}
-      {!isDemo && <div style={{
-        minHeight:    '120px',
-        maxHeight:    '160px',
-        background:   '#0a1520',
-        borderTop:    '2px solid var(--grid-line)',
-        display:      'flex',
-        alignItems:   'center',
-        padding:      '0.5rem 0.75rem',
-        gap:          '0.5rem',
-        overflowX:    'auto',
-        overflowY:    'hidden',
-        flexShrink:   0,
-        WebkitOverflowScrolling: 'touch' as any,
-      }}>
-        <span style={{
-          opacity:     0.4,
-          fontSize:    '0.65rem',
-          writingMode: 'vertical-rl' as any,
-          flexShrink:  0,
-          letterSpacing: '0.05em',
+      {/* ── Dock tray — hidden during DEMO ────────────────────────────── */}
+      {!isDemo && (
+        <div style={{
+          minHeight:  '100px',
+          maxHeight:  '140px',
+          background: 'linear-gradient(180deg, #0a1520 0%, #0d1f30 100%)',
+          borderTop:  '2px solid rgba(59,173,232,0.2)',
+          display:    'flex',
+          alignItems: 'center',
+          padding:    '0.5rem 1rem',
+          gap:        '0.5rem',
+          overflowX:  'auto',
+          overflowY:  'hidden',
+          flexShrink: 0,
+          WebkitOverflowScrolling: 'touch' as any,
         }}>
-          TRAY
-        </span>
-
-        {dockBlocks.map(b => (
-          <div
-            key={b.id}
-            onPointerDown={(e) => handleTrayPointerDown(e, b.id)}
-            style={{
-              cursor:    'grab',
-              flexShrink: 0,
-              // Dim the source log while it's being dragged
-              opacity:   dragging?.blockId === b.id ? 0.35 : 1,
-              transition: 'opacity 0.1s',
-            }}
-            title={`Drag to place ${b.numerator}/${b.denominator} log`}
-          >
-            <Log block={b} dispatch={dispatch} />
-          </div>
-        ))}
-
-        {dockBlocks.length === 0 && (
-          <span style={{ opacity: 0.35, fontSize: '0.8rem' }}>
-            All logs placed
+          <span style={{
+            opacity:      0.35,
+            fontSize:     '0.6rem',
+            writingMode:  'vertical-rl' as any,
+            flexShrink:   0,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase' as any,
+          }}>
+            Logs
           </span>
-        )}
 
-        {/* Undo: remove the last-placed log — works in all phases */}
-        {buildBlocks.length > 0 && (
-          <button
-            onClick={() => {
-              // In build phases buildZoneLogs is tracked; in EXPLORE fall back to buildBlocks
-              const lastId =
-                state.buildZoneLogs[state.buildZoneLogs.length - 1]
-                ?? buildBlocks[buildBlocks.length - 1]?.id
-              if (lastId) dispatch({ type: 'LOG_RETURNED', blockId: lastId })
-            }}
-            style={{
-              marginLeft:   'auto',
-              padding:      '0.4rem 0.75rem',
-              fontSize:     '0.8rem',
-              background:   'transparent',
-              color:        'var(--ui-text)',
-              border:       '1px solid var(--grid-line)',
-              borderRadius: '0.4rem',
-              cursor:       'pointer',
-              flexShrink:   0,
-              opacity:      0.7,
-            }}
-          >
-            ← Undo
-          </button>
-        )}
-      </div>}
+          {dockBlocks.map(b => (
+            <div
+              key={b.id}
+              onPointerDown={(e) => handleTrayPointerDown(e, b.id)}
+              style={{
+                cursor:    'grab',
+                flexShrink: 0,
+                opacity:   dragging?.blockId === b.id ? 0.3 : 1,
+                transition: 'opacity 0.1s',
+              }}
+              title={`Drag ${b.numerator}/${b.denominator} log to river`}
+            >
+              <Log block={b} dispatch={dispatch} />
+            </div>
+          ))}
+
+          {dockBlocks.length === 0 && (
+            <span style={{ opacity: 0.35, fontSize: '0.85rem', color: 'var(--ref-gate)' }}>
+              All logs placed ✓
+            </span>
+          )}
+
+          {buildBlocks.length > 0 && (
+            <button
+              onClick={() => {
+                const lastId =
+                  state.buildZoneLogs[state.buildZoneLogs.length - 1]
+                  ?? buildBlocks[buildBlocks.length - 1]?.id
+                if (lastId) dispatch({ type: 'LOG_RETURNED', blockId: lastId })
+              }}
+              style={{
+                marginLeft:   'auto',
+                padding:      '0.4rem 0.9rem',
+                fontSize:     '0.8rem',
+                background:   'rgba(255,255,255,0.07)',
+                color:        'var(--ui-text)',
+                border:       '1px solid rgba(255,255,255,0.15)',
+                borderRadius: '0.5rem',
+                cursor:       'pointer',
+                flexShrink:   0,
+              }}
+            >
+              ← Undo
+            </button>
+          )}
+        </div>
+      )}
 
       {/* ── Drag ghost ─────────────────────────────────────────────────── */}
       {/* Rendered fixed so it escapes all overflow and scale transforms.  */}
