@@ -1,0 +1,20 @@
+# Dependencies
+app/node_modules/
+
+# Build output
+app/dist/
+app/.vite/
+
+# Personal planning docs — gitignored per project rules
+ROADMAP.md
+STUDY_GUIDE.md
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+
+# Editor
+.claude/

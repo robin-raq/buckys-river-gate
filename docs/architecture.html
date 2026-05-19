@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bucky's River Gate — Architecture</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0D1B2A;
+    color: #E2E8F0;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    padding: 32px;
+    min-height: 100vh;
+  }
+  h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #3BADE8;
+    margin-bottom: 6px;
+    letter-spacing: 0.05em;
+  }
+  .subtitle {
+    font-size: 11px;
+    color: #64748B;
+    margin-bottom: 36px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ── SECTION LABELS ── */
+  .section-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    opacity: 0.5;
+  }
+
+  /* ── DIAGRAM GRID ── */
+  .diagram {
+    display: grid;
+    grid-template-columns: 1fr 2px 1fr 2px 1fr;
+    grid-template-rows: auto;
+    gap: 24px 0;
+  }
+  .divider {
+    background: #1F4E72;
+    align-self: stretch;
+    margin: 0 16px;
+    border-radius: 2px;
+  }
+
+  /* ── BOXES ── */
+  .box {
+    border-radius: 8px;
+    padding: 10px 13px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+    position: relative;
+  }
+  .box .name {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 3px;
+  }
+  .box .detail {
+    font-size: 10px;
+    opacity: 0.6;
+    font-weight: 400;
+  }
+
+  /* Colors by layer */
+  .layer-ui      { background: #1A3A5C; border: 1px solid #2563EB44; }
+  .layer-state   { background: #1C2B1A; border: 1px solid #16A34A44; }
+  .layer-domain  { background: #2A1C10; border: 1px solid #C2410C44; }
+  .layer-audio   { background: #1F1035; border: 1px solid #7C3AED44; }
+  .layer-infra   { background: #1A1A1A; border: 1px solid #52525B44; }
+
+  .layer-ui .name      { color: #60A5FA; }
+  .layer-state .name   { color: #4ADE80; }
+  .layer-domain .name  { color: #FB923C; }
+  .layer-audio .name   { color: #A78BFA; }
+  .layer-infra .name   { color: #A1A1AA; }
+
+  /* ── STACKS ── */
+  .stack { display: flex; flex-direction: column; gap: 8px; }
+  .stack-label {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.4;
+    margin-bottom: 4px;
+    padding-left: 2px;
+  }
+
+  /* ── FLOW DIAGRAM (top section) ── */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+    gap: 0;
+  }
+  .flow-node {
+    background: #1A3A5C;
+    border: 1px solid #3BADE866;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #93C5FD;
+    white-space: nowrap;
+    text-align: center;
+  }
+  .flow-node.green  { background: #1C2B1A; border-color: #4ADE8066; color: #86EFAC; }
+  .flow-node.orange { background: #2A1C10; border-color: #FB923C66; color: #FCA36E; }
+  .flow-node.purple { background: #1F1035; border-color: #A78BFA66; color: #C4B5FD; }
+  .flow-arrow {
+    color: #1F4E72;
+    font-size: 18px;
+    padding: 0 4px;
+    font-weight: 300;
+  }
+  .flow-label {
+    font-size: 9px;
+    color: #64748B;
+    text-align: center;
+    margin-top: 3px;
+  }
+  .flow-col { display: flex; flex-direction: column; align-items: center; }
+
+  /* ── COMPONENT TREE ── */
+  .tree { font-size: 11px; line-height: 2; }
+  .tree-line { display: flex; align-items: center; gap: 6px; }
+  .tree-indent { color: #1F4E72; user-select: none; }
+  .tree-name { color: #60A5FA; font-weight: 600; }
+  .tree-name.state-owner { color: #4ADE80; }
+  .tree-props { color: #64748B; font-size: 10px; }
+  .tree-note {
+    font-size: 9px;
+    background: #1C2B1A;
+    color: #4ADE80;
+    border-radius: 3px;
+    padding: 1px 5px;
+    margin-left: 4px;
+  }
+  .tree-note.audio {
+    background: #1F1035;
+    color: #A78BFA;
+  }
+
+  /* ── FSM TABLE ── */
+  .fsm-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 4px; }
+  .fsm-table th {
+    text-align: left;
+    color: #64748B;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border-bottom: 1px solid #1F4E72;
+  }
+  .fsm-table td {
+    padding: 4px 8px;
+    border-bottom: 1px solid #0F2A3F;
+    vertical-align: top;
+  }
+  .fsm-phase { color: #60A5FA; font-weight: 600; }
+  .fsm-event { color: #FB923C; }
+  .fsm-next  { color: #4ADE80; }
+  .fsm-note  { color: #64748B; font-size: 9px; }
+
+  /* ── DATA FLOW LOOP ── */
+  .loop-diagram {
+    display: flex;
+    justify-content: center;
+    margin: 24px 0 32px;
+  }
+
+  /* ── SECTION DIVIDERS ── */
+  hr.section {
+    border: none;
+    border-top: 1px solid #1F4E72;
+    margin: 32px 0;
+  }
+
+  h2 {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #64748B;
+    margin-bottom: 16px;
+  }
+
+  /* ── MODULE MAP ── */
+  .module-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  .module-group { }
+  .module-group-title {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #1F4E72;
+  }
+  .module-file {
+    font-size: 10px;
+    padding: 4px 0;
+    border-bottom: 1px solid #0F2A3F;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .module-file .fname { font-weight: 600; }
+  .module-file .fexport { font-size: 9px; opacity: 0.5; }
+
+  /* ── KEY CONTRACTS HIGHLIGHT ── */
+  .contract-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .contract-box {
+    background: #0F1E2E;
+    border: 1px solid #1F4E72;
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+  .contract-box h3 {
+    font-size: 10px;
+    font-weight: 700;
+    color: #FB923C;
+    margin-bottom: 6px;
+    letter-spacing: 0.05em;
+  }
+  .contract-box code {
+    font-size: 10px;
+    color: #CBD5E1;
+    line-height: 1.8;
+    display: block;
+  }
+  .contract-box .ret { color: #4ADE80; }
+  .contract-box .param { color: #93C5FD; }
+  .contract-box .type { color: #A78BFA; }
+</style>
+</head>
+<body>
+
+<h1>Bucky's River Gate</h1>
+<p class="subtitle">Architecture Diagram · WK04-CST · Superbuilders Gauntlet</p>
+
+<!-- ── 1. DATA FLOW LOOP ─────────────────────────────────── -->
+<h2>1 · Data Flow Loop</h2>
+<div class="flow" style="margin-bottom:8px;">
+  <div class="flow-col">
+    <div class="flow-node">User Gesture<br><span style="font-size:9px;opacity:0.6">touchend / touchstart</span></div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-col">
+    <div class="flow-node">Component<br><span style="font-size:9px;opacity:0.6">&lt;Log /&gt; &lt;CheckButton /&gt;</span></div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-col">
+    <div class="flow-node orange">dispatch(LessonEvent)<br><span style="font-size:9px;opacity:0.6">CHECK_SUBMIT · CHOP · LOG_SNAPPED</span></div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-col">
+    <div class="flow-node green">lessonReducer<br><span style="font-size:9px;opacity:0.6">pure function, no side effects</span></div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-col">
+    <div class="flow-node green">LessonState<br><span style="font-size:9px;opacity:0.6">phase · blocks · dialogueNodeId</span></div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-col">
+    <div class="flow-node purple">useEffect<br><span style="font-size:9px;opacity:0.6">audio · animation triggers</span></div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-col">
+    <div class="flow-node" style="border-color:#3BADE8;">React Re-render<br><span style="font-size:9px;opacity:0.6">new UI from new state</span></div>
+  </div>
+</div>
+<p style="font-size:10px;color:#64748B;margin-bottom:32px;">
+  Audio and animation are <strong style="color:#A78BFA">never triggered inside the reducer</strong>.
+  Components watch <code style="color:#4ADE80">state.phase</code> and <code style="color:#4ADE80">state.dialogueNodeId</code> via <code style="color:#A78BFA">useEffect</code> and call <code style="color:#A78BFA">toneEngine</code> as a side effect.
+</p>
+
+<hr class="section">
+
+<!-- ── 2. COMPONENT TREE ────────────────────────────────── -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;">
+
+<div>
+<h2>2 · Component Tree</h2>
+<div class="tree">
+
+  <div class="tree-line">
+    <span class="tree-name state-owner">&lt;App /&gt;</span>
+    <span class="tree-note">owns LessonState + dispatch</span>
+  </div>
+
+  <div class="tree-line">
+    <span class="tree-indent">├─</span>
+    <span class="tree-name">&lt;BootScreen /&gt;</span>
+    <span class="tree-props">onStart</span>
+  </div>
+  <div class="tree-line" style="margin-left:8px;font-size:10px;color:#64748B;">
+    <span class="tree-indent">&nbsp;&nbsp;&nbsp;</span>
+    <span>"Let's Build!" · unlockAudio()</span>
+  </div>
+
+  <div class="tree-line" style="margin-top:4px;">
+    <span class="tree-indent">└─</span>
+    <span class="tree-name">&lt;LessonScreen /&gt;</span>
+    <span class="tree-props">state · dispatch</span>
+  </div>
+
+  <div class="tree-line">
+    <span class="tree-indent">&nbsp;&nbsp;&nbsp;├─</span>
+    <span class="tree-name">&lt;TopBar /&gt;</span>
+  </div>
+  <div class="tree-line">
+    <span class="tree-indent">&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;├─</span>
+    <span class="tree-name">&lt;BuckyAvatar /&gt;</span>
+    <span class="tree-props">buckyState</span>
+  </div>
+  <div class="tree-line">
+    <span class="tree-indent">&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;├─</span>
+    <span class="tree-name">&lt;SpeechBubble /&gt;</span>
+    <span class="tree-props">text · onComplete</span>
+  </div>
+  <div class="tree-line">
+    <span class="tree-indent">&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;└─</span>
+    <span class="tree-name">&lt;PhaseDots /&gt;</span>
+    <span class="tree-props">phase</span>
+  </div>
+
+  <div class="tree-line" style="margin-top:4px;">
+    <span class="tree-indent">&nbsp;&nbsp;&nbsp;├─</span>
+    <span class="tree-name">&lt;RiverGrid /&gt;</span>
+    <span class="tree-note">owns drag context</span>
+  </div>
+  <div class="tree-line">
+    <span class="tree-indent">&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;├─</span>
+    <span class="tree-name">&lt;ReferenceGate /&gt;</span>
+    <span class="tree-props">gate · visible · label</span>
+  </div>
+  <div class="tree-line">
+    <span class="tree-indent">&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;├─</span>
+    <span class="tree-name">&lt;BuildZone /&gt;</span>
+  </div>
+  <div class="tree-line">
+    <span class="tree-indent">&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;│&nbsp;&nbsp;└─</span>
+    <span class="tree-name">&lt;Log /&gt;</span>
+    <span class="tree-props">block · dispatch</span>
+    <span style="color:#FB923C;font-size:9px;margin-left:4px;">×n</span>
+  </div>
+  <div class="tree-line">
+    <span class="tree-indent">&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;└─</span>
+    <span class="tree-name">&lt;SnapGuides /&gt;</span>
+  </div>
+
+  <div class="tree-line" style="margin-top:4px;">
+    <span class="tree-indent">&nbsp;&nbsp;&nbsp;├─</span>
+    <span class="tree-name">&lt;ToolTray /&gt;</span>
+  </div>
+  <div class="tree-line">
+    <span class="tree-indent">&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;├─</span>
+    <span class="tree-name">&lt;LogDock /&gt;</span>
+  </div>
+  <div class="tree-line">
+    <span class="tree-indent">&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;│&nbsp;&nbsp;└─</span>
+    <span class="tree-name">&lt;Log /&gt;</span>
+    <span class="tree-props">zone='dock'</span>
+    <span style="color:#FB923C;font-size:9px;margin-left:4px;">×n</span>
+  </div>
+  <div class="tree-line">
+    <span class="tree-indent">&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;└─</span>
+    <span class="tree-name">&lt;CheckButton /&gt;</span>
+    <span class="tree-props">label · disabled · onPress</span>
+  </div>
+
+  <div class="tree-line" style="margin-top:4px;">
+    <span class="tree-indent">&nbsp;&nbsp;&nbsp;└─</span>
+    <span style="color:#A78BFA;font-weight:600;">overlays/</span>
+  </div>
+  <div class="tree-line">
+    <span class="tree-indent">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─</span>
+    <span class="tree-name">&lt;GhostOverlay /&gt;</span>
+    <span class="tree-props">visible · gate</span>
+  </div>
+  <div class="tree-line">
+    <span class="tree-indent">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─</span>
+    <span class="tree-name">&lt;EquivalenceBadge /&gt;</span>
+  </div>
+  <div class="tree-line">
+    <span class="tree-indent">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─</span>
+    <span class="tree-name">&lt;ChallengeCounter /&gt;</span>
+    <span class="tree-props">current · total</span>
+  </div>
+  <div class="tree-line">
+    <span class="tree-indent">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─</span>
+    <span class="tree-name">&lt;WinScreen /&gt;</span>
+    <span class="tree-props">onPlayAgain</span>
+  </div>
+
+</div>
+</div>
+
+<!-- ── 3. FSM PHASES ─────────────────────────────────────── -->
+<div>
+<h2>3 · FSM Phases</h2>
+<table class="fsm-table">
+  <thead>
+    <tr>
+      <th>Phase</th>
+      <th>Key Events</th>
+      <th>→ Next</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="fsm-phase">BOOT</td>
+      <td class="fsm-event">START</td>
+      <td class="fsm-next">EXPLORE</td>
+    </tr>
+    <tr>
+      <td class="fsm-phase">EXPLORE</td>
+      <td class="fsm-event">TIMEOUT · COMPLETE</td>
+      <td class="fsm-next">EXPLORE_END</td>
+    </tr>
+    <tr>
+      <td class="fsm-phase">EXPLORE_END</td>
+      <td class="fsm-event">DIALOGUE_ADVANCE</td>
+      <td class="fsm-next">INSTRUCT_INTRO</td>
+    </tr>
+    <tr>
+      <td class="fsm-phase">INSTRUCT_INTRO</td>
+      <td class="fsm-event">DIALOGUE_ADVANCE</td>
+      <td class="fsm-next">INSTRUCT_BUILD</td>
+    </tr>
+    <tr>
+      <td class="fsm-phase">INSTRUCT_BUILD</td>
+      <td class="fsm-event">CHECK_SUBMIT ✓</td>
+      <td class="fsm-next">INSTRUCT_SUCCESS</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td class="fsm-event">CHECK_SUBMIT ✗</td>
+      <td class="fsm-next">INSTRUCT_ERROR</td>
+    </tr>
+    <tr>
+      <td class="fsm-phase">INSTRUCT_ERROR</td>
+      <td class="fsm-event">ADVANCE · attempt &lt; 2</td>
+      <td class="fsm-next">INSTRUCT_BUILD</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td class="fsm-event">ADVANCE · attempt ≥ 2</td>
+      <td class="fsm-next">INSTRUCT_INTRO ↺</td>
+    </tr>
+    <tr>
+      <td class="fsm-phase">INSTRUCT_SUCCESS</td>
+      <td class="fsm-event">DIALOGUE_ADVANCE</td>
+      <td class="fsm-next">CHECK_INTRO</td>
+    </tr>
+    <tr>
+      <td class="fsm-phase">CHECK_INTRO</td>
+      <td class="fsm-event">DIALOGUE_ADVANCE</td>
+      <td class="fsm-next">CHECK_ACTIVE</td>
+    </tr>
+    <tr>
+      <td class="fsm-phase">CHECK_ACTIVE</td>
+      <td class="fsm-event">CHECK_SUBMIT ✓</td>
+      <td class="fsm-next">CHECK_SUCCESS</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td class="fsm-event">CHECK_SUBMIT ✗ · 1st</td>
+      <td class="fsm-next">CHECK_ERROR_1</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td class="fsm-event">CHECK_SUBMIT ✗ · 2nd</td>
+      <td class="fsm-next">CHECK_ERROR_2</td>
+    </tr>
+    <tr>
+      <td class="fsm-phase">CHECK_ERROR_1</td>
+      <td class="fsm-event">DIALOGUE_ADVANCE</td>
+      <td class="fsm-next">CHECK_ACTIVE</td>
+    </tr>
+    <tr>
+      <td class="fsm-phase">CHECK_ERROR_2</td>
+      <td class="fsm-event">DIALOGUE_ADVANCE</td>
+      <td class="fsm-next">INSTRUCT_INTRO ↺</td>
+    </tr>
+    <tr>
+      <td class="fsm-phase">CHECK_SUCCESS</td>
+      <td class="fsm-event">ADVANCE · passed &lt; 3</td>
+      <td class="fsm-next">CHECK_ACTIVE</td>
+    </tr>
+    <tr>
+      <td></td>
+      <td class="fsm-event">ADVANCE · passed = 3</td>
+      <td class="fsm-next">WIN 🎉</td>
+    </tr>
+    <tr>
+      <td class="fsm-phase">WIN</td>
+      <td class="fsm-event">PLAY_AGAIN</td>
+      <td class="fsm-next">BOOT</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+
+<hr class="section">
+
+<!-- ── 4. MODULE MAP ─────────────────────────────────────── -->
+<h2>4 · Module Map</h2>
+<div class="module-grid">
+
+  <div class="module-group">
+    <div class="module-group-title" style="color:#60A5FA;">UI — components/</div>
+    <div class="module-file"><span class="fname" style="color:#60A5FA;">BootScreen.tsx</span><span class="fexport">onStart prop</span></div>
+    <div class="module-file"><span class="fname" style="color:#60A5FA;">LessonScreen.tsx</span><span class="fexport">orchestrates layout</span></div>
+    <div class="module-file"><span class="fname" style="color:#60A5FA;">Log.tsx</span><span class="fexport">drag + long-press + tap</span></div>
+    <div class="module-file"><span class="fname" style="color:#60A5FA;">ReferenceGate.tsx</span><span class="fexport">glowing blue target</span></div>
+    <div class="module-file"><span class="fname" style="color:#60A5FA;">BuckyAvatar.tsx</span><span class="fexport">8 sprite states</span></div>
+    <div class="module-file"><span class="fname" style="color:#60A5FA;">SpeechBubble.tsx</span><span class="fexport">typewriter, onComplete</span></div>
+    <div class="module-file"><span class="fname" style="color:#60A5FA;">CheckButton.tsx</span><span class="fexport">CHECK / Submit</span></div>
+    <div class="module-file"><span class="fname" style="color:#60A5FA;">WinScreen.tsx</span><span class="fexport">graduation overlay</span></div>
+    <div class="module-file"><span class="fname" style="color:#60A5FA;">GhostOverlay.tsx</span><span class="fexport">transparent 1/2 log</span></div>
+  </div>
+
+  <div class="module-group">
+    <div class="module-group-title" style="color:#4ADE80;">State — state/</div>
+    <div class="module-file"><span class="fname" style="color:#4ADE80;">types.ts</span><span class="fexport">LessonState · BlockState · DialogueNode · all interfaces</span></div>
+    <div class="module-file"><span class="fname" style="color:#4ADE80;">lessonEvents.ts</span><span class="fexport">LessonEvent union type</span></div>
+    <div class="module-file"><span class="fname" style="color:#4ADE80;">lessonReducer.ts</span><span class="fexport">lessonReducer · initLessonState</span></div>
+    <div class="module-file"><span class="fname" style="color:#4ADE80;">initialState.ts</span><span class="fexport">factory fn</span></div>
+    <div class="module-file"><span class="fname" style="color:#4ADE80;">dialogue.ts</span><span class="fexport">DIALOGUE · validateDialogueTree · getDialogueNode · selectShortfallNodeId</span></div>
+    <div class="module-file"><span class="fname" style="color:#4ADE80;">checkChallenges.ts</span><span class="fexport">CHECK_CHALLENGES[3]</span></div>
+  </div>
+
+  <div class="module-group">
+    <div class="module-group-title" style="color:#FB923C;">Domain — utils/</div>
+    <div class="module-file"><span class="fname" style="color:#FB923C;">fractionMath.ts</span><span class="fexport">validateBuildZone · detectWrongType · computeShortfallBracket · isSolutionValid · classifySolution</span></div>
+    <div class="module-file"><span class="fname" style="color:#FB923C;">snapUtils.ts</span><span class="fexport">snapToSlot · slotToX · isValidPlacement</span></div>
+    <div class="module-file"><span class="fname" style="color:#FB923C;">dragUtils.ts</span><span class="fexport">createDragHandlers</span></div>
+    <div class="module-file"><span class="fname" style="color:#FB923C;">constants.ts</span><span class="fexport">RIVER_WIDTH_PX=960 · SLOT_WIDTH_PX=240 · ROW_HEIGHT_PX=80</span></div>
+    <div class="module-group-title" style="color:#A78BFA;margin-top:16px;">Audio — audio/</div>
+    <div class="module-file"><span class="fname" style="color:#A78BFA;">toneEngine.ts</span><span class="fexport">AudioContext singleton · all play* fns · unlockAudio</span></div>
+    <div class="module-file"><span class="fname" style="color:#A78BFA;">toneConfig.ts</span><span class="fexport">FRACTION_TONES map</span></div>
+  </div>
+
+  <div class="module-group">
+    <div class="module-group-title" style="color:#A1A1AA;">Styles + Infra</div>
+    <div class="module-file"><span class="fname" style="color:#A1A1AA;">tokens.css</span><span class="fexport">--bg-deep · --log-half · --ref-gate · all design tokens</span></div>
+    <div class="module-file"><span class="fname" style="color:#A1A1AA;">global.css</span><span class="fexport">touch-action · user-select · Tailwind base</span></div>
+    <div class="module-file"><span class="fname" style="color:#A1A1AA;">vite.config.ts</span><span class="fexport">React plugin · Vitest jsdom</span></div>
+    <div class="module-file"><span class="fname" style="color:#A1A1AA;">tailwind.config.ts</span></div>
+    <div class="module-group-title" style="color:#A1A1AA;margin-top:16px;">Tests</div>
+    <div class="module-file"><span class="fname" style="color:#A1A1AA;">fractionMath.test.ts</span></div>
+    <div class="module-file"><span class="fname" style="color:#A1A1AA;">lessonReducer.test.ts</span></div>
+    <div class="module-file"><span class="fname" style="color:#A1A1AA;">dialogue.test.ts</span></div>
+    <div class="module-file"><span class="fname" style="color:#A1A1AA;">toneEngine.test.ts</span></div>
+  </div>
+
+</div>
+
+<hr class="section">
+
+<!-- ── 5. KEY CONTRACTS ──────────────────────────────────── -->
+<h2>5 · Key Function Contracts</h2>
+<div class="contract-grid">
+
+  <div class="contract-box">
+    <h3>fractionMath.ts — validation core</h3>
+    <code>
+      validateBuildZone(<span class="param">placed</span>: <span class="type">FractionValue[]</span>, <span class="param">gate</span>: <span class="type">FractionValue</span>)<br>
+      &nbsp;&nbsp;<span class="ret">→ 'correct' | 'too_short' | 'too_long'</span><br>
+      <br>
+      isSolutionValid(<span class="param">placed</span>: <span class="type">FractionValue[]</span>, <span class="param">challenge</span>: <span class="type">Challenge</span>)<br>
+      &nbsp;&nbsp;<span class="ret">→ boolean</span>  <span style="color:#64748B">// checks ALL validSolutions arrays</span><br>
+      <br>
+      computeShortfallBracket(<span class="param">placed</span>, <span class="param">gate</span>)<br>
+      &nbsp;&nbsp;<span class="ret">→ 'empty' | 'one_unit' | 'partial'</span><br>
+      <br>
+      <span style="color:#64748B">// Never float. DENOM=4. a/b===c/d ↔ a×d===b×c</span>
+    </code>
+  </div>
+
+  <div class="contract-box">
+    <h3>lessonReducer.ts — FSM core</h3>
+    <code>
+      lessonReducer(<span class="param">state</span>: <span class="type">LessonState</span>, <span class="param">event</span>: <span class="type">LessonEvent</span>)<br>
+      &nbsp;&nbsp;<span class="ret">→ LessonState</span><br>
+      <br>
+      <span style="color:#64748B">// Pure. No side effects. No audio. No DOM.</span><br>
+      <span style="color:#64748B">// Unknown events → return state unchanged.</span><br>
+      <span style="color:#64748B">// Audio triggered by useEffect in components.</span><br>
+      <br>
+      initLessonState()<br>
+      &nbsp;&nbsp;<span class="ret">→ LessonState</span>  <span style="color:#64748B">// BOOT phase</span>
+    </code>
+  </div>
+
+  <div class="contract-box">
+    <h3>toneEngine.ts — audio singleton</h3>
+    <code>
+      unlockAudio()  <span style="color:#64748B">// call inside touchend only</span><br>
+      playFractionTone(<span class="param">fraction</span>: <span class="type">FractionValue</span>)<br>
+      playChopSound(<span class="param">children</span>: <span class="type">[FV, FV]</span>)<br>
+      startChopTension() / stopChopTension()<br>
+      startDragRustle() / stopDragRustle()<br>
+      playGateMatchSound()<br>
+      playCheckCorrectSound()<br>
+      playWinFanfare()<br>
+      <span style="color:#64748B">// Single AudioContext. Max 4 per page (Safari).</span>
+    </code>
+  </div>
+
+  <div class="contract-box">
+    <h3>dialogue.ts — content tree</h3>
+    <code>
+      <span style="color:#64748B">// Called at module load — throws before first render</span><br>
+      validateDialogueTree()  <span class="ret">→ void | throws</span><br>
+      <br>
+      getDialogueNode(<span class="param">id</span>: <span class="type">string</span>)<br>
+      &nbsp;&nbsp;<span class="ret">→ DialogueNode | throws</span><br>
+      <br>
+      selectShortfallNodeId(<span class="param">bracket</span>, <span class="param">challengeIndex</span>)<br>
+      &nbsp;&nbsp;<span class="ret">→ string</span>  <span style="color:#64748B">// nodeId for Bucky hint</span><br>
+      <br>
+      <span style="color:#64748B">// DIALOGUE: Record&lt;string, DialogueNode&gt;</span>
+    </code>
+  </div>
+
+</div>
+
+<hr class="section">
+
+<!-- ── 6. DEPLOYMENT ─────────────────────────────────────── -->
+<h2>6 · Deployment</h2>
+<div class="flow" style="align-items:flex-start;">
+  <div class="flow-col">
+    <div class="flow-node" style="font-size:11px;">Source<br><span style="font-size:9px;opacity:0.6;">src/ + index.html</span></div>
+  </div>
+  <div class="flow-arrow" style="margin-top:18px;">→</div>
+  <div class="flow-col">
+    <div class="flow-node orange" style="font-size:11px;">tsc --noEmit<br><span style="font-size:9px;opacity:0.6;">type check</span></div>
+  </div>
+  <div class="flow-arrow" style="margin-top:18px;">→</div>
+  <div class="flow-col">
+    <div class="flow-node orange" style="font-size:11px;">vitest run<br><span style="font-size:9px;opacity:0.6;">unit tests</span></div>
+  </div>
+  <div class="flow-arrow" style="margin-top:18px;">→</div>
+  <div class="flow-col">
+    <div class="flow-node orange" style="font-size:11px;">vite build<br><span style="font-size:9px;opacity:0.6;">→ dist/</span></div>
+  </div>
+  <div class="flow-arrow" style="margin-top:18px;">→</div>
+  <div class="flow-col">
+    <div class="flow-node green" style="font-size:11px;">Vercel / Netlify<br><span style="font-size:9px;opacity:0.6;">static bundle · no server</span></div>
+  </div>
+  <div class="flow-arrow" style="margin-top:18px;">→</div>
+  <div class="flow-col">
+    <div class="flow-node" style="font-size:11px;">iPad Safari<br><span style="font-size:9px;opacity:0.6;">public URL · demo device</span></div>
+  </div>
+</div>
+<p style="font-size:10px;color:#64748B;margin-top:8px;">
+  No server. No API keys. No environment variables. Static HTML/JS/CSS served from CDN. Works fully offline after first load.
+</p>
+
+</body>
+</html>

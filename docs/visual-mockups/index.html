@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Bucky's River Gate — Visual Mockups</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@600;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-deep: #0f172a;
+      --river: #1e3a5f;
+      --river-shine: #2d5a87;
+      --grid-line: rgba(148, 163, 184, 0.25);
+      --log-whole: #d97706;
+      --log-half: #f59e0b;
+      --log-quarter: #fcd34d;
+      --log-text: #1c1917;
+      --ref-gate: #3b82f6;
+      --ref-fill: rgba(59, 130, 246, 0.18);
+      --success: #34d399;
+      --error: #f87171;
+      --bubble: #fefce8;
+      --bubble-text: #1c1917;
+      --ui-text: #e2e8f0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Nunito', system-ui, sans-serif;
+      background: #020617;
+      color: var(--ui-text);
+      min-height: 100vh;
+      padding: 1rem;
+    }
+
+    header {
+      max-width: 900px;
+      margin: 0 auto 1rem;
+      text-align: center;
+    }
+
+    header h1 {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.5rem;
+      color: #fbbf24;
+      font-weight: 700;
+    }
+
+    header p {
+      font-size: 0.85rem;
+      opacity: 0.75;
+      margin-top: 0.35rem;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+      max-width: 900px;
+      margin: 0 auto 1rem;
+    }
+
+    .tabs button {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 0.8rem;
+      padding: 0.45rem 0.9rem;
+      border: 2px solid #334155;
+      border-radius: 999px;
+      background: #1e293b;
+      color: var(--ui-text);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tabs button.active {
+      background: #f59e0b;
+      border-color: #fbbf24;
+      color: #1c1917;
+    }
+
+    .ipad-frame {
+      max-width: 820px;
+      margin: 0 auto;
+      aspect-ratio: 4 / 3;
+      background: linear-gradient(145deg, #1e293b, #0f172a);
+      border-radius: 28px;
+      padding: 14px;
+      box-shadow:
+        0 0 0 3px #334155,
+        0 24px 60px rgba(0, 0, 0, 0.55),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .screen {
+      display: none;
+      width: 100%;
+      height: 100%;
+      border-radius: 16px;
+      overflow: hidden;
+      flex-direction: column;
+      background: var(--bg-deep);
+      position: relative;
+    }
+
+    .screen.active { display: flex; }
+
+    .screen::before {
+      content: '';
+      position: absolute;
+      inset: 0 0 55% 0;
+      background:
+        radial-gradient(1px 1px at 12% 22%, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1px 1px at 78% 15%, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1.5px 1.5px at 45% 8%, rgba(255,255,255,0.6), transparent);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .top-bar {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 14px 8px;
+      position: relative;
+      z-index: 2;
+      min-height: 100px;
+    }
+
+    .bucky {
+      width: 72px;
+      height: 72px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: linear-gradient(160deg, #a16207 0%, #78350f 55%, #451a03 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.4rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      border: 3px solid #fbbf24;
+    }
+
+    .bubble {
+      flex: 1;
+      background: var(--bubble);
+      color: var(--bubble-text);
+      border-radius: 18px;
+      padding: 10px 14px;
+      font-size: 0.78rem;
+      line-height: 1.35;
+      font-weight: 600;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+      position: relative;
+    }
+
+    .bubble::after {
+      content: '';
+      position: absolute;
+      left: -8px;
+      bottom: 14px;
+      border: 8px solid transparent;
+      border-right-color: var(--bubble);
+    }
+
+    .phase-dots {
+      display: flex;
+      gap: 6px;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 0.65rem;
+      margin-top: 4px;
+    }
+
+    .phase-dots span { opacity: 0.35; }
+    .phase-dots span.on { opacity: 1; color: #fbbf24; }
+
+    .challenge-badge {
+      position: absolute;
+      top: 12px;
+      right: 14px;
+      z-index: 3;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 0.7rem;
+      background: rgba(15, 23, 42, 0.85);
+      border: 2px solid #475569;
+      padding: 4px 10px;
+      border-radius: 8px;
+    }
+
+    .river-wrap {
+      flex: 1;
+      margin: 0 14px;
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .ref-row {
+      height: 56px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+    }
+
+    .ref-gate {
+      height: 48px;
+      border: 3px solid var(--ref-gate);
+      background: var(--ref-fill);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Fredoka', sans-serif;
+      font-weight: 700;
+      color: #93c5fd;
+      font-size: 1rem;
+      box-shadow: 0 0 16px rgba(59, 130, 246, 0.55);
+      animation: pulse-gate 2s ease-in-out infinite;
+    }
+
+    .ref-gate.w34 { width: 75%; }
+    .ref-gate.w50 { width: 50%; }
+    .ref-gate.hidden { visibility: hidden; }
+
+    @keyframes pulse-gate {
+      0%, 100% { box-shadow: 0 0 12px rgba(59, 130, 246, 0.45); }
+      50% { box-shadow: 0 0 22px rgba(59, 130, 246, 0.85); }
+    }
+
+    .build-zone {
+      flex: 1;
+      min-height: 88px;
+      background: linear-gradient(180deg, var(--river-shine) 0%, var(--river) 40%, #16324f 100%);
+      border-radius: 14px;
+      border: 2px dashed rgba(148, 163, 184, 0.35);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .build-zone::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent calc(25% - 1px),
+        var(--grid-line) calc(25% - 1px),
+        var(--grid-line) 25%
+      );
+    }
+
+    .water-shimmer {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.06) 50%, transparent 70%);
+      animation: shimmer 4s linear infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .logs-in-zone {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      z-index: 2;
+    }
+
+    .log {
+      height: 52px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Fredoka', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--log-text);
+      background-image: repeating-linear-gradient(0deg, transparent, transparent 6px, rgba(0,0,0,0.06) 6px, rgba(0,0,0,0.06) 8px);
+      box-shadow: 0 6px 0 rgba(0,0,0,0.25), 0 8px 16px rgba(0,0,0,0.2);
+    }
+
+    .log.whole { width: 100%; background-color: var(--log-whole); }
+    .log.half { width: 50%; background-color: var(--log-half); }
+    .log.quarter { width: 25%; background-color: var(--log-quarter); min-width: 60px; }
+    .log.lifted { transform: translateY(-8px); outline: 3px solid #fbbf24; }
+    .log.success-glow { box-shadow: 0 0 20px var(--success), 0 6px 0 rgba(0,0,0,0.2); }
+    .log.locked { opacity: 0.35; filter: grayscale(0.5); }
+
+    .gap-hint {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      width: 25%;
+      height: 52px;
+      border: 2px dashed var(--error);
+      border-radius: 8px;
+      animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink { 50% { opacity: 0.4; } }
+
+    .equivalence-badge {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #fbbf24;
+      text-shadow: 0 0 24px rgba(251, 191, 36, 0.8);
+      animation: slam 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes slam {
+      0% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+
+    .dock {
+      display: flex;
+      gap: 10px;
+      padding: 12px 14px 14px;
+      flex-wrap: wrap;
+      align-items: center;
+      position: relative;
+      z-index: 2;
+    }
+
+    .dock .log { height: 44px; font-size: 0.8rem; }
+
+    .btn-check, .btn-start {
+      font-family: 'Fredoka', sans-serif;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    .btn-check {
+      margin-left: auto;
+      font-size: 0.9rem;
+      padding: 10px 20px;
+      background: linear-gradient(180deg, #34d399, #059669);
+      color: #064e3b;
+      box-shadow: 0 4px 0 #047857;
+    }
+
+    .boot-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      padding: 2rem;
+      background: radial-gradient(ellipse at 50% 30%, #1e3a5f, var(--bg-deep));
+    }
+
+    .boot-screen .bucky-large { font-size: 5rem; margin-bottom: 1rem; }
+
+    .boot-screen h2 {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.8rem;
+      color: #fbbf24;
+    }
+
+    .btn-start {
+      margin-top: 1.5rem;
+      font-size: 1.1rem;
+      padding: 14px 28px;
+      background: linear-gradient(180deg, #f59e0b, #d97706);
+      color: #1c1917;
+      box-shadow: 0 6px 0 #92400e;
+    }
+
+    .win-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    .confetti {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      animation: fall 2s linear infinite;
+    }
+
+    @keyframes fall {
+      to { transform: translateY(400px) rotate(360deg); opacity: 0; }
+    }
+
+    .notes {
+      max-width: 820px;
+      margin: 1.5rem auto 0;
+      padding: 1rem;
+      background: #1e293b;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+
+    .notes h3 {
+      font-family: 'Fredoka', sans-serif;
+      color: #fbbf24;
+      margin-bottom: 0.5rem;
+    }
+
+    .notes ul { padding-left: 1.2rem; }
+
+    /* ── CHOP interaction ── */
+    .log.chopping {
+      position: relative;
+      outline: 3px solid #f59e0b;
+      animation: chop-pulse 0.5s ease-in-out infinite;
+    }
+
+    @keyframes chop-pulse {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.25); }
+    }
+
+    .saw-line {
+      position: absolute;
+      top: 8px;
+      bottom: 8px;
+      left: 50%;
+      width: 0;
+      border-left: 3px dashed #fbbf24;
+      transform: translateX(-50%);
+      animation: saw-dash 0.6s linear infinite;
+      z-index: 5;
+    }
+
+    @keyframes saw-dash {
+      to { stroke-dashoffset: -20px; }
+    }
+
+    .axe-hint {
+      position: absolute;
+      top: -28px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 1.4rem;
+      animation: axe-bob 0.4s ease-in-out infinite alternate;
+    }
+
+    @keyframes axe-bob {
+      from { transform: translateX(-50%) translateY(0); }
+      to { transform: translateX(-50%) translateY(-6px); }
+    }
+
+    .chop-progress {
+      position: absolute;
+      bottom: 4px;
+      left: 8px;
+      right: 8px;
+      height: 6px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .chop-progress-fill {
+      height: 100%;
+      width: 72%;
+      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+      border-radius: 3px;
+      animation: fill-hold 1.2s ease-out forwards;
+    }
+
+    @keyframes fill-hold {
+      from { width: 0; }
+      to { width: 72%; }
+    }
+
+    .log-splitting {
+      display: flex;
+      width: 50%;
+      gap: 4px;
+      position: relative;
+    }
+
+    .log-splitting .log {
+      flex: 1;
+      min-width: 0;
+      width: auto;
+      animation: split-apart 0.6s ease-out forwards;
+    }
+
+    .log-splitting .log:last-child {
+      animation-delay: 0.08s;
+    }
+
+    @keyframes split-apart {
+      0% { transform: scaleX(0.5); opacity: 0.6; }
+      100% { transform: scaleX(1); opacity: 1; }
+    }
+
+    .chip-burst {
+      position: absolute;
+      top: 20%;
+      left: 48%;
+      width: 24px;
+      height: 24px;
+      pointer-events: none;
+    }
+
+    .chip {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background: #c49a6c;
+      border-radius: 1px;
+      animation: chip-fly 0.7s ease-out forwards;
+    }
+
+    .chip:nth-child(1) { animation-delay: 0s; --tx: -20px; --ty: -30px; }
+    .chip:nth-child(2) { animation-delay: 0.05s; --tx: 18px; --ty: -25px; }
+    .chip:nth-child(3) { animation-delay: 0.1s; --tx: -8px; --ty: -35px; }
+    .chip:nth-child(4) { animation-delay: 0.08s; --tx: 12px; --ty: -28px; }
+
+    @keyframes chip-fly {
+      to { transform: translate(var(--tx), var(--ty)); opacity: 0; }
+    }
+
+    .log.wiggle {
+      animation: wiggle 0.35s ease-in-out 3;
+      outline: 2px solid #f87171;
+    }
+
+    @keyframes wiggle {
+      0%, 100% { transform: rotate(0); }
+      25% { transform: rotate(-3deg); }
+      75% { transform: rotate(3deg); }
+    }
+
+    .log .too-small {
+      position: absolute;
+      top: 4px;
+      right: 6px;
+      font-size: 0.65rem;
+      opacity: 0.9;
+    }
+
+    .bucky.chopping-face::after {
+      content: '🪓';
+      position: absolute;
+      bottom: -4px;
+      right: -4px;
+      font-size: 1rem;
+    }
+
+    .log.whole.chopping { width: 100%; }
+
+    .storyboard-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 10px 14px 14px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .storyboard-strip {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+      flex: 1;
+      align-content: center;
+    }
+
+    .story-frame {
+      background: rgba(30, 58, 95, 0.6);
+      border: 2px solid #334155;
+      border-radius: 8px;
+      padding: 6px 4px;
+      text-align: center;
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .story-frame.active {
+      border-color: #fbbf24;
+      box-shadow: 0 0 12px rgba(251, 191, 36, 0.45);
+    }
+
+    .story-frame .frame-visual {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      min-height: 56px;
+    }
+
+    .story-frame .frame-label {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 0.55rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .story-frame.active .frame-label { color: #fbbf24; }
+
+    .story-playback {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 8px;
+      font-size: 0.75rem;
+    }
+
+    .story-playback button {
+      font-family: 'Fredoka', sans-serif;
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 2px solid #475569;
+      background: #1e293b;
+      color: var(--ui-text);
+      cursor: pointer;
+    }
+
+    .story-playback button:hover { border-color: #f59e0b; }
+
+    .ref-gallery {
+      max-width: 900px;
+      margin: 1.5rem auto 0;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .ref-gallery figure {
+      background: #1e293b;
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 0;
+    }
+
+    .ref-gallery img {
+      width: 100%;
+      display: block;
+    }
+
+    .ref-gallery figcaption {
+      padding: 0.6rem 0.8rem;
+      font-size: 0.78rem;
+      opacity: 0.85;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Bucky's River Gate</h1>
+    <p>Interactive UI mockups — tap tabs to preview each lesson phase (iPad landscape)</p>
+  </header>
+
+  <nav class="tabs" aria-label="Screen phases">
+    <button type="button" class="active" data-screen="boot">Boot</button>
+    <button type="button" data-screen="explore">Explore</button>
+    <button type="button" data-screen="chop-ready">Chop (hold)</button>
+    <button type="button" data-screen="chop-done">Chop (done)</button>
+    <button type="button" data-screen="chop-nope">Can't chop</button>
+    <button type="button" data-screen="chop-whole">Chop 1/1</button>
+    <button type="button" data-screen="chop-whole-done">1/1 → halves</button>
+    <button type="button" data-screen="storyboard">Storyboard</button>
+    <button type="button" data-screen="instruct">Instruct</button>
+    <button type="button" data-screen="error">Error hint</button>
+    <button type="button" data-screen="check">Check</button>
+    <button type="button" data-screen="win">Win</button>
+  </nav>
+
+  <div class="ipad-frame">
+    <section class="screen active" id="boot">
+      <div class="boot-screen">
+        <div class="bucky-large">🦫</div>
+        <h2>Bucky's River Gate</h2>
+        <p style="max-width:320px;font-size:0.9rem;opacity:0.9">Tap the logs, chop 'em, and hear what they sound like!</p>
+        <button type="button" class="btn-start" data-goto="explore">Let's Build! 🪵</button>
+      </div>
+    </section>
+
+    <section class="screen" id="explore">
+      <div class="top-bar">
+        <div class="bucky">🦫</div>
+        <div>
+          <div class="bubble">Oh! You found my logs! Tap them and hear their sounds. Try chopping one!</div>
+          <div class="phase-dots"><span class="on">● EXPLORE</span><span>○ INSTRUCT</span><span>○ CHECK</span></div>
+        </div>
+      </div>
+      <div class="river-wrap">
+        <div class="ref-row"><div class="ref-gate hidden w50">= 1/2</div></div>
+        <div class="build-zone"><div class="water-shimmer"></div></div>
+      </div>
+      <div class="dock">
+        <div class="log whole">1 whole</div>
+        <div class="log half">1/2</div>
+        <div class="log quarter">1/4</div>
+        <div class="log quarter">1/4</div>
+      </div>
+    </section>
+
+  <!-- CHOP: long-press ready -->
+    <section class="screen" id="chop-ready">
+      <div class="top-bar">
+        <div class="bucky chopping-face">🦫</div>
+        <div>
+          <div class="bubble">Hold a log for a second… then tap to CHOP! Watch the dashed line.</div>
+          <div class="phase-dots"><span class="on">● EXPLORE</span><span>○ INSTRUCT</span><span>○ CHECK</span></div>
+        </div>
+      </div>
+      <div class="river-wrap">
+        <div class="ref-row"><div class="ref-gate hidden w50">= 1/2</div></div>
+        <div class="build-zone">
+          <div class="water-shimmer"></div>
+          <div class="logs-in-zone">
+            <div class="log half chopping" style="width:50%">
+              <span class="axe-hint">🪓</span>
+              <div class="saw-line"></div>
+              <div class="chop-progress"><div class="chop-progress-fill"></div></div>
+              1/2
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dock">
+        <div class="log whole">1 whole</div>
+        <div class="log half locked">1/2</div>
+        <div class="log quarter">1/4</div>
+        <div class="log quarter">1/4</div>
+      </div>
+    </section>
+
+    <!-- CHOP: split complete -->
+    <section class="screen" id="chop-done">
+      <div class="top-bar">
+        <div class="bucky">😄</div>
+        <div>
+          <div class="bubble">Did you hear that?! One big log… two smaller ones. Same space!</div>
+          <div class="phase-dots"><span class="on">● EXPLORE</span><span>○ INSTRUCT</span><span>○ CHECK</span></div>
+        </div>
+      </div>
+      <div class="river-wrap">
+        <div class="ref-row"><div class="ref-gate hidden w50">= 1/2</div></div>
+        <div class="build-zone">
+          <div class="water-shimmer"></div>
+          <div class="chip-burst">
+            <span class="chip"></span><span class="chip"></span><span class="chip"></span><span class="chip"></span>
+          </div>
+          <div class="logs-in-zone log-splitting">
+            <div class="log quarter success-glow">1/4</div>
+            <div class="log quarter success-glow">1/4</div>
+          </div>
+        </div>
+      </div>
+      <div class="dock">
+        <div class="log whole">1 whole</div>
+        <div class="log quarter">1/4</div>
+        <div class="log quarter">1/4</div>
+        <div class="log quarter">1/4</div>
+      </div>
+    </section>
+
+    <!-- CHOP: 1/4 too small -->
+    <section class="screen" id="chop-nope">
+      <div class="top-bar">
+        <div class="bucky">🦫</div>
+        <div>
+          <div class="bubble">That one's already the smallest piece — can't chop it any more!</div>
+          <div class="phase-dots"><span class="on">● EXPLORE</span><span>○ INSTRUCT</span><span>○ CHECK</span></div>
+        </div>
+      </div>
+      <div class="river-wrap">
+        <div class="ref-row"><div class="ref-gate hidden w50">= 1/2</div></div>
+        <div class="build-zone">
+          <div class="water-shimmer"></div>
+          <div class="logs-in-zone">
+            <div class="log quarter wiggle" style="width:25%">
+              <span class="too-small">🔒</span>
+              1/4
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dock">
+        <div class="log whole">1 whole</div>
+        <div class="log half">1/2</div>
+        <div class="log quarter wiggle">1/4</div>
+        <div class="log quarter">1/4</div>
+      </div>
+    </section>
+
+
+    <section class="screen" id="chop-whole">
+      <div class="top-bar">
+        <div class="bucky chopping-face">🦫</div>
+        <div>
+          <div class="bubble">This one's HUGE — hold it, then chop! It'll split into two halves.</div>
+          <div class="phase-dots"><span class="on">● EXPLORE</span><span>○ INSTRUCT</span><span>○ CHECK</span></div>
+        </div>
+      </div>
+      <div class="river-wrap">
+        <div class="ref-row"><div class="ref-gate hidden w50">= 1/2</div></div>
+        <div class="build-zone">
+          <div class="water-shimmer"></div>
+          <div class="logs-in-zone">
+            <div class="log whole chopping">
+              <span class="axe-hint">🪓</span>
+              <div class="saw-line"></div>
+              <div class="chop-progress"><div class="chop-progress-fill"></div></div>
+              1 whole
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dock">
+        <div class="log whole locked">1 whole</div>
+        <div class="log half">1/2</div>
+        <div class="log quarter">1/4</div>
+        <div class="log quarter">1/4</div>
+      </div>
+    </section>
+
+    <section class="screen" id="chop-whole-done">
+      <div class="top-bar">
+        <div class="bucky">😄</div>
+        <div>
+          <div class="bubble">One whole became two halves — still the same river width!</div>
+          <div class="phase-dots"><span class="on">● EXPLORE</span><span>○ INSTRUCT</span><span>○ CHECK</span></div>
+        </div>
+      </div>
+      <div class="river-wrap">
+        <div class="ref-row"><div class="ref-gate hidden w50">= 1/2</div></div>
+        <div class="build-zone">
+          <div class="water-shimmer"></div>
+          <div class="chip-burst">
+            <span class="chip"></span><span class="chip"></span><span class="chip"></span><span class="chip"></span>
+          </div>
+          <div class="logs-in-zone log-splitting" style="width:100%">
+            <div class="log half success-glow" style="flex:1">1/2</div>
+            <div class="log half success-glow" style="flex:1">1/2</div>
+          </div>
+        </div>
+      </div>
+      <div class="dock">
+        <div class="log quarter">1/4</div>
+        <div class="log quarter">1/4</div>
+        <div class="log quarter">1/4</div>
+        <div class="log quarter">1/4</div>
+      </div>
+    </section>
+
+    <section class="screen" id="storyboard">
+      <div class="top-bar" style="min-height:72px">
+        <div class="bucky chopping-face">🦫</div>
+        <div class="bubble" style="font-size:0.72rem">CHOP sequence (1/2 → 2× 1/4). Tap Play to step through frames.</div>
+      </div>
+      <div class="storyboard-screen">
+        <div class="storyboard-strip" id="storyboard-strip">
+          <div class="story-frame active" data-frame="0">
+            <div class="frame-visual">🪵</div>
+            <span class="frame-label">1 · Idle</span>
+          </div>
+          <div class="story-frame" data-frame="1">
+            <div class="frame-visual">👆</div>
+            <span class="frame-label">2 · Hold</span>
+          </div>
+          <div class="story-frame" data-frame="2">
+            <div class="frame-visual">┄🪓</div>
+            <span class="frame-label">3 · Ready</span>
+          </div>
+          <div class="story-frame" data-frame="3">
+            <div class="frame-visual">🪓💥</div>
+            <span class="frame-label">4 · Swing</span>
+          </div>
+          <div class="story-frame" data-frame="4">
+            <div class="frame-visual">🪵🪵</div>
+            <span class="frame-label">5 · Split</span>
+          </div>
+          <div class="story-frame" data-frame="5">
+            <div class="frame-visual">✓</div>
+            <span class="frame-label">6 · Done</span>
+          </div>
+        </div>
+        <div class="story-playback">
+          <button type="button" id="story-play">▶ Play</button>
+          <span id="story-time">0ms</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="instruct">
+      <div class="top-bar">
+        <div class="bucky">🦫</div>
+        <div>
+          <div class="bubble">See this blue gap? Fill it with two quarter logs!</div>
+          <div class="phase-dots"><span>● EXPLORE</span><span class="on">○ INSTRUCT</span><span>○ CHECK</span></div>
+        </div>
+      </div>
+      <div class="river-wrap">
+        <div class="ref-row"><div class="ref-gate w50">= 1/2</div></div>
+        <div class="build-zone">
+          <div class="water-shimmer"></div>
+          <div class="logs-in-zone">
+            <div class="log quarter success-glow">1/4</div>
+            <div class="log quarter lifted">1/4</div>
+          </div>
+        </div>
+      </div>
+      <div class="dock">
+        <div class="log quarter locked">1/4</div>
+        <div class="log quarter locked">1/4</div>
+      </div>
+    </section>
+
+    <section class="screen" id="error">
+      <div class="top-bar">
+        <div class="bucky">🦫</div>
+        <div>
+          <div class="bubble">See that gap on the right? Add another quarter log to close it!</div>
+          <div class="phase-dots"><span>● EXPLORE</span><span class="on">○ INSTRUCT</span><span>○ CHECK</span></div>
+        </div>
+      </div>
+      <div class="river-wrap">
+        <div class="ref-row"><div class="ref-gate w50">= 1/2</div></div>
+        <div class="build-zone">
+          <div class="water-shimmer"></div>
+          <div class="logs-in-zone"><div class="log quarter">1/4</div></div>
+          <div class="gap-hint"></div>
+        </div>
+      </div>
+      <div class="dock">
+        <div class="log quarter">1/4</div>
+        <div class="log quarter">1/4</div>
+      </div>
+    </section>
+
+    <section class="screen" id="check">
+      <span class="challenge-badge">Challenge 2 of 3</span>
+      <div class="top-bar">
+        <div class="bucky">🦫</div>
+        <div>
+          <div class="bubble">This gap is three-quarters wide. What logs fit?</div>
+          <div class="phase-dots"><span>● EXPLORE</span><span>● INSTRUCT</span><span class="on">○ CHECK</span></div>
+        </div>
+      </div>
+      <div class="river-wrap">
+        <div class="ref-row"><div class="ref-gate w34">= 3/4</div></div>
+        <div class="build-zone"><div class="water-shimmer"></div></div>
+      </div>
+      <div class="dock">
+        <div class="log half">1/2</div>
+        <div class="log quarter">1/4</div>
+        <div class="log quarter">1/4</div>
+        <div class="log quarter">1/4</div>
+        <div class="log whole locked">1 whole</div>
+        <button type="button" class="btn-check">CHECK ✓</button>
+      </div>
+    </section>
+
+    <section class="screen" id="win">
+      <div class="win-overlay" id="confetti-root"></div>
+      <div class="top-bar">
+        <div class="bucky">🎉</div>
+        <div>
+          <div class="bubble">THREE FOR THREE! You proved 1/2 = 2/4!</div>
+          <div class="phase-dots"><span class="on">● DONE</span></div>
+        </div>
+      </div>
+      <div class="river-wrap">
+        <div class="ref-row"><div class="ref-gate w50">= 1/2</div></div>
+        <div class="build-zone">
+          <div class="water-shimmer"></div>
+          <div class="equivalence-badge">1/2 = 2/4</div>
+          <div class="logs-in-zone">
+            <div class="log quarter success-glow">1/4</div>
+            <div class="log quarter success-glow">1/4</div>
+          </div>
+        </div>
+      </div>
+      <div class="dock" style="justify-content:center">
+        <button type="button" class="btn-start" data-goto="explore">Play Again 🪵</button>
+      </div>
+    </section>
+  </div>
+
+  <aside class="notes">
+    <h3>Design system (from GDD)</h3>
+    <ul>
+      <li><strong>Log width = fraction</strong> — size is the math; color reinforces (amber → gold → pine).</li>
+      <li><strong>Reference Gate</strong> — pulsing blue target the child matches in the build zone.</li>
+      <li><strong>Errors</strong> — red dashed gap (too short); soft, never punitive.</li>
+      <li><strong>Bucky zone</strong> — avatar + bubble + phase progress dots.</li>
+      <li><strong>Chop flow</strong> — long-press → dashed saw line + amber pulse → tap confirm → split + chips; 1/4 wiggles + lock if too small.</li>
+      <li><strong>1/1 chop</strong> — whole log splits into 2× 1/2 (tabs Chop 1/1, 1/1 → halves).</li>
+      <li><strong>Storyboard</strong> — see <code>CHOP_STORYBOARD.md</code> for frame timing handoff.</li>
+    </ul>
+  </aside>
+
+  <section class="ref-gallery" aria-label="Reference art">
+    <figure>
+      <img src="bucky-chop-storyboard.png" alt="Six-frame CHOP animation storyboard" width="900" height="400" />
+      <figcaption>Storyboard contact sheet — IDLE → HOLD → READY → SWING → SPLIT → DONE</figcaption>
+    </figure>
+    <figure>
+      <img src="bucky-chop-whole-to-halves.png" alt="Chopping a whole log" width="900" height="400" />
+      <figcaption>1/1 long-press — saw line on center of whole log</figcaption>
+    </figure>
+    <figure>
+      <img src="bucky-chop-whole-complete.png" alt="Two half logs after chop" width="900" height="400" />
+      <figcaption>1/1 → 2× 1/2 complete — same total width</figcaption>
+    </figure>
+  </section>
+
+  <script>
+    const tabs = document.querySelectorAll('.tabs button');
+    const screens = document.querySelectorAll('.screen');
+    const colors = ['#f59e0b', '#fcd34d', '#34d399', '#3b82f6', '#fbbf24'];
+
+    const STORY_FRAMES = [
+      { ms: 0,    label: 'Idle' },
+      { ms: 500,  label: 'Hold' },
+      { ms: 500,  label: 'Ready' },
+      { ms: 120,  label: 'Swing' },
+      { ms: 200,  label: 'Split' },
+      { ms: 300,  label: 'Done' }
+    ];
+    let storyTimer = null;
+    let storyPlaying = false;
+
+    function showScreen(id) {
+      screens.forEach(s => s.classList.toggle('active', s.id === id));
+      tabs.forEach(t => t.classList.toggle('active', t.dataset.screen === id));
+      if (id === 'win') spawnConfetti();
+      if (id === 'storyboard') setStoryFrame(0);
+      else stopStoryboard();
+    }
+
+    function setStoryFrame(i) {
+      const frames = document.querySelectorAll('.story-frame');
+      let elapsed = 0;
+      frames.forEach((f, idx) => {
+        f.classList.toggle('active', idx === i);
+        if (idx < i) elapsed += STORY_FRAMES[idx].ms;
+      });
+      const timeEl = document.getElementById('story-time');
+      if (timeEl) timeEl.textContent = elapsed + 'ms · ' + STORY_FRAMES[i].label;
+    }
+
+    function stopStoryboard() {
+      storyPlaying = false;
+      if (storyTimer) clearTimeout(storyTimer);
+      storyTimer = null;
+      const btn = document.getElementById('story-play');
+      if (btn) btn.textContent = '▶ Play';
+    }
+
+    function playStoryboard(step) {
+      if (step >= STORY_FRAMES.length) {
+        stopStoryboard();
+        return;
+      }
+      setStoryFrame(step);
+      storyTimer = setTimeout(() => playStoryboard(step + 1), STORY_FRAMES[step].ms);
+    }
+
+    document.getElementById('story-play')?.addEventListener('click', () => {
+      if (storyPlaying) {
+        stopStoryboard();
+        return;
+      }
+      storyPlaying = true;
+      document.getElementById('story-play').textContent = '⏹ Stop';
+      playStoryboard(0);
+    });
+
+    tabs.forEach(btn => btn.addEventListener('click', () => showScreen(btn.dataset.screen)));
+    document.querySelectorAll('[data-goto]').forEach(btn => {
+      btn.addEventListener('click', () => showScreen(btn.dataset.goto));
+    });
+
+    function spawnConfetti() {
+      const root = document.getElementById('confetti-root');
+      while (root.firstChild) root.removeChild(root.firstChild);
+      for (let i = 0; i < 24; i++) {
+        const c = document.createElement('div');
+        c.className = 'confetti';
+        c.style.left = Math.random() * 100 + '%';
+        c.style.background = colors[i % colors.length];
+        c.style.animationDelay = Math.random() * 1.5 + 's';
+        root.appendChild(c);
+      }
+    }
+  </script>
+</body>
+</html>
