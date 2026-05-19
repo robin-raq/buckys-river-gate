@@ -30,9 +30,9 @@ const BUILD_PHASES = new Set([
 ])
 const CHECK_PHASES = new Set(['CHECK_ACTIVE', 'CHECK_ERROR_1', 'CHECK_ERROR_2'])
 
-// Gate only makes sense once the student has seen INSTRUCT_BUILD
+// Gate is visible from the moment Bucky introduces it ("See that blue line?")
 const GATE_VISIBLE_PHASES = new Set([
-  'INSTRUCT_BUILD', 'INSTRUCT_ERROR', 'INSTRUCT_SUCCESS',
+  'INSTRUCT_INTRO', 'INSTRUCT_BUILD', 'INSTRUCT_ERROR', 'INSTRUCT_SUCCESS',
   'CHECK_INTRO', 'CHECK_ACTIVE', 'CHECK_ERROR_1', 'CHECK_ERROR_2', 'CHECK_SUCCESS', 'WIN',
 ])
 
