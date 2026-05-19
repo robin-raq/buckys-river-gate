@@ -21,8 +21,9 @@ export const DIALOGUE: Record<string, DialogueNode> = {
 
   // ── DEMO ──────────────────────────────────────────────────────────────────
   // Bucky demonstrates before the student touches anything.
-  // All nodes are tap-to-continue. The reducer drives block mutations
-  // at DEMO_SHOW_LOG (add 1/2 log) and DEMO_CHOP (auto-split into 1/4s).
+  // All nodes are tap-to-continue. The reducer drives block mutations at
+  // chop moments: DEMO_CHOP_1 (1 whole → 2 halves), DEMO_CHOP_2 (left 1/2 →
+  // 2 quarters), DEMO_CHOP_3 (right 1/2 → 2 quarters → 4 quarters total).
 
   DEMO_INTRO: {
     text:          "Hey there, Builder! I'm Bucky. I protect this river village by building log gates.",
@@ -30,38 +31,56 @@ export const DIALOGUE: Record<string, DialogueNode> = {
     tapToContinue: true,
   },
 
-  DEMO_SHOW_LOG: {
-    text:          "See this log? It covers exactly half the river. We call it a one-half log.",
+  DEMO_SHOW_WHOLE: {
+    text:          "See this log? It fills the entire river from bank to bank. We call it a whole log — one out of one.",
     buckyState:    'idle',
     tapToContinue: true,
   },
 
-  DEMO_CHOP: {
-    text:          "Watch this!",
+  DEMO_CHOP_1: {
+    text:          "Watch what happens when I chop it right down the middle!",
     buckyState:    'chop-swing',
     tapToContinue: true,
   },
 
-  DEMO_SHOW_PIECES: {
-    text:          "That big log split into two equal sticks! The pieces are smaller now...",
+  DEMO_SHOW_HALVES: {
+    text:          "Two equal halves! Each one covers exactly half the river. Two halves still fill the whole thing.",
     buckyState:    'excited',
     tapToContinue: true,
   },
 
-  DEMO_COMBINE: {
-    text:          "But together, they still cover the exact same river space!",
-    buckyState:    'build-stack',
+  DEMO_CHOP_2: {
+    text:          "Now let me chop this left half in two...",
+    buckyState:    'chop-swing',
+    tapToContinue: true,
+  },
+
+  DEMO_SHOW_FIRST_QUARTERS: {
+    text:          "Two little quarter-logs! See how two quarters sit right where the half log was? Two quarters equal one half.",
+    buckyState:    'excited',
+    tapToContinue: true,
+  },
+
+  DEMO_CHOP_3: {
+    text:          "Let me do the same to the right half...",
+    buckyState:    'chop-swing',
+    tapToContinue: true,
+  },
+
+  DEMO_SHOW_ALL_QUARTERS: {
+    text:          "Four quarters — and look! They fill the whole river, just like the big log did. Four quarters equal one whole!",
+    buckyState:    'celebrating',
     tapToContinue: true,
   },
 
   DEMO_EQUATION: {
-    text:          "One half-log matches two quarter-logs. Same space. Different pieces!",
+    text:          "So: 2 halves = 1 whole. 2 quarters = 1 half. 4 quarters = 1 whole. Same river, different pieces!",
     buckyState:    'excited',
     tapToContinue: true,
   },
 
   DEMO_HANDOFF: {
-    text:          "Now YOU try! Grab the logs below and snap them into the river.",
+    text:          "Now YOU try! Drag the whole log into the river and see what you can do with it.",
     buckyState:    'encouraging',
     tapToContinue: true,
   },
@@ -73,7 +92,7 @@ export const DIALOGUE: Record<string, DialogueNode> = {
   // ambient Bucky text only; the "Ready! →" button in the header exits EXPLORE.
 
   EXPLORE_INTRO: {
-    text:       "Now YOU try! Drag a log into the river. Double-tap the half log to chop it — see what happens!",
+    text:       "Now YOU try! Drag that whole log into the river. Then double-tap it to chop — see how many pieces you can make!",
     buckyState: 'excited',
   },
 

@@ -33,7 +33,7 @@ describe('LessonScreen visual integration', () => {
   it('renders BuckyAvatar with dialogue buckyState', () => {
     render(
       <LessonScreen
-        state={makeLessonState({ dialogueNodeId: 'DEMO_CHOP', phase: 'DEMO' })}
+        state={makeLessonState({ dialogueNodeId: 'DEMO_CHOP_1', phase: 'DEMO' })}
         dispatch={noop}
       />,
     )

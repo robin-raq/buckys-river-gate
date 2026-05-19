@@ -21,8 +21,8 @@ function stateAt(phase: LessonState['phase']): LessonState {
   s = dispatch(s, { type: 'START' })
   if (phase === 'DEMO') return s
 
-  // DEMO → EXPLORE (7 DIALOGUE_ADVANCE events, one per demo slide)
-  for (let i = 0; i < 7; i++) s = dispatch(s, { type: 'DIALOGUE_ADVANCE' })
+  // DEMO → EXPLORE (10 DIALOGUE_ADVANCE events, one per demo slide)
+  for (let i = 0; i < 10; i++) s = dispatch(s, { type: 'DIALOGUE_ADVANCE' })
   if (phase === 'EXPLORE') return s
 
   // EXPLORE → EXPLORE_END
@@ -87,56 +87,97 @@ describe('DEMO phase', () => {
   let demo: LessonState
   beforeEach(() => { demo = stateAt('DEMO') })
 
+  function adv(s: LessonState, n = 1): LessonState {
+    for (let i = 0; i < n; i++) s = dispatch(s, { type: 'DIALOGUE_ADVANCE' })
+    return s
+  }
+
   it('non-DIALOGUE_ADVANCE event is ignored', () => {
     const s = dispatch(demo, { type: 'EXPLORE_TIMEOUT' })
     expect(s.phase).toBe('DEMO')
     expect(s.dialogueNodeId).toBe('DEMO_INTRO')
   })
 
-  it('slide 1: DEMO_INTRO → DEMO_SHOW_LOG adds a 1/2 log to the build zone', () => {
-    const s = dispatch(demo, { type: 'DIALOGUE_ADVANCE' })
-    expect(s.dialogueNodeId).toBe('DEMO_SHOW_LOG')
-    const buildLogs = s.blocks.filter(b => b.zone === 'build')
-    expect(buildLogs).toHaveLength(1)
-    expect(buildLogs[0].denominator).toBe(2)
+  // ── Slide 1: DEMO_INTRO → DEMO_SHOW_WHOLE ───────────────────────────────
+  it('slide 1: DEMO_INTRO → DEMO_SHOW_WHOLE adds a 1/1 whole log to build zone', () => {
+    const s = adv(demo)
+    expect(s.dialogueNodeId).toBe('DEMO_SHOW_WHOLE')
+    const build = s.blocks.filter(b => b.zone === 'build')
+    expect(build).toHaveLength(1)
+    expect(build[0].denominator).toBe(1)
+    expect(build[0].locked).toBe(true)
   })
 
-  it('slide 2: DEMO_SHOW_LOG → DEMO_CHOP keeps the 1/2 log, no split yet', () => {
-    let s = dispatch(demo, { type: 'DIALOGUE_ADVANCE' }) // → DEMO_SHOW_LOG
-    s     = dispatch(s,    { type: 'DIALOGUE_ADVANCE' }) // → DEMO_CHOP
-    expect(s.dialogueNodeId).toBe('DEMO_CHOP')
+  // ── Slide 2: DEMO_SHOW_WHOLE → DEMO_CHOP_1 ──────────────────────────────
+  it('slide 2: DEMO_SHOW_WHOLE → DEMO_CHOP_1 — no block change yet', () => {
+    const s = adv(demo, 2)
+    expect(s.dialogueNodeId).toBe('DEMO_CHOP_1')
     expect(s.blocks.filter(b => b.zone === 'build')).toHaveLength(1)
-    expect(s.blocks.find(b => b.denominator === 2)).toBeDefined()
   })
 
-  it('slide 3: DEMO_CHOP → DEMO_SHOW_PIECES auto-splits into two 1/4 logs in build zone', () => {
-    let s = dispatch(demo, { type: 'DIALOGUE_ADVANCE' }) // → DEMO_SHOW_LOG
-    s     = dispatch(s,    { type: 'DIALOGUE_ADVANCE' }) // → DEMO_CHOP
-    s     = dispatch(s,    { type: 'DIALOGUE_ADVANCE' }) // → DEMO_SHOW_PIECES
-    expect(s.dialogueNodeId).toBe('DEMO_SHOW_PIECES')
-    const buildLogs = s.blocks.filter(b => b.zone === 'build')
-    expect(buildLogs).toHaveLength(2)
-    expect(buildLogs.every(b => b.denominator === 4)).toBe(true)
+  // ── Slide 3: DEMO_CHOP_1 → DEMO_SHOW_HALVES (1 whole → 2 halves) ────────
+  it('slide 3: DEMO_CHOP_1 → DEMO_SHOW_HALVES splits whole into two 1/2 logs', () => {
+    const s = adv(demo, 3)
+    expect(s.dialogueNodeId).toBe('DEMO_SHOW_HALVES')
+    const build = s.blocks.filter(b => b.zone === 'build')
+    expect(build).toHaveLength(2)
+    expect(build.every(b => b.denominator === 2)).toBe(true)
+    expect(build.every(b => b.locked)).toBe(true)
   })
 
-  it('slides 4–6: DEMO_SHOW_PIECES → DEMO_COMBINE → DEMO_EQUATION → DEMO_HANDOFF advance without block changes', () => {
-    let s = dispatch(demo, { type: 'DIALOGUE_ADVANCE' }) // → DEMO_SHOW_LOG
-    s     = dispatch(s,    { type: 'DIALOGUE_ADVANCE' }) // → DEMO_CHOP
-    s     = dispatch(s,    { type: 'DIALOGUE_ADVANCE' }) // → DEMO_SHOW_PIECES
-    const blocksBefore = s.blocks.length
-    s     = dispatch(s,    { type: 'DIALOGUE_ADVANCE' }) // → DEMO_COMBINE
-    s     = dispatch(s,    { type: 'DIALOGUE_ADVANCE' }) // → DEMO_EQUATION
-    s     = dispatch(s,    { type: 'DIALOGUE_ADVANCE' }) // → DEMO_HANDOFF
-    expect(s.dialogueNodeId).toBe('DEMO_HANDOFF')
-    expect(s.blocks).toHaveLength(blocksBefore)
+  // ── Slide 4: DEMO_SHOW_HALVES → DEMO_CHOP_2 ─────────────────────────────
+  it('slide 4: DEMO_SHOW_HALVES → DEMO_CHOP_2 — blocks unchanged', () => {
+    const s = adv(demo, 4)
+    expect(s.dialogueNodeId).toBe('DEMO_CHOP_2')
+    expect(s.blocks.filter(b => b.zone === 'build')).toHaveLength(2)
   })
 
-  it('slide 7: DEMO_HANDOFF → EXPLORE with EXPLORE_INVENTORY restored', () => {
+  // ── Slide 5: DEMO_CHOP_2 → DEMO_SHOW_FIRST_QUARTERS (left 1/2 → 2×1/4) ─
+  it('slide 5: DEMO_CHOP_2 → DEMO_SHOW_FIRST_QUARTERS — left half split into 2 quarters, right half kept', () => {
+    const s = adv(demo, 5)
+    expect(s.dialogueNodeId).toBe('DEMO_SHOW_FIRST_QUARTERS')
+    const build = s.blocks.filter(b => b.zone === 'build')
+    expect(build).toHaveLength(3)  // 2 quarters + 1 half
+    const quarters = build.filter(b => b.denominator === 4)
+    const halves   = build.filter(b => b.denominator === 2)
+    expect(quarters).toHaveLength(2)
+    expect(halves).toHaveLength(1)
+  })
+
+  // ── Slide 6: DEMO_SHOW_FIRST_QUARTERS → DEMO_CHOP_3 ────────────────────
+  it('slide 6: DEMO_SHOW_FIRST_QUARTERS → DEMO_CHOP_3 — blocks unchanged', () => {
+    const s = adv(demo, 6)
+    expect(s.dialogueNodeId).toBe('DEMO_CHOP_3')
+    expect(s.blocks.filter(b => b.zone === 'build')).toHaveLength(3)
+  })
+
+  // ── Slide 7: DEMO_CHOP_3 → DEMO_SHOW_ALL_QUARTERS (right 1/2 → 2×1/4) ─
+  it('slide 7: DEMO_CHOP_3 → DEMO_SHOW_ALL_QUARTERS — right half split, all 4 quarters in build zone', () => {
+    const s = adv(demo, 7)
+    expect(s.dialogueNodeId).toBe('DEMO_SHOW_ALL_QUARTERS')
+    const build = s.blocks.filter(b => b.zone === 'build')
+    expect(build).toHaveLength(4)
+    expect(build.every(b => b.denominator === 4)).toBe(true)
+  })
+
+  // ── Slides 8–9: DEMO_EQUATION → DEMO_HANDOFF — dialogue only ─────────────
+  it('slides 8–9: DEMO_EQUATION → DEMO_HANDOFF — no block changes', () => {
+    const s7 = adv(demo, 7)
+    const blockCount = s7.blocks.length
+    const s8 = adv(s7)
+    const s9 = adv(s8)
+    expect(s8.dialogueNodeId).toBe('DEMO_EQUATION')
+    expect(s9.dialogueNodeId).toBe('DEMO_HANDOFF')
+    expect(s9.blocks).toHaveLength(blockCount)
+  })
+
+  // ── Slide 10: DEMO_HANDOFF → EXPLORE ─────────────────────────────────────
+  it('slide 10: DEMO_HANDOFF → EXPLORE with a whole log in the dock', () => {
     const s = stateAt('EXPLORE')
     expect(s.phase).toBe('EXPLORE')
     expect(s.dialogueNodeId).toBe('EXPLORE_INTRO')
-    // EXPLORE_INVENTORY: 2× 1/1 + 1× 1/2 in dock
-    expect(s.blocks.filter(b => b.zone === 'dock')).toHaveLength(3)
+    const dock = s.blocks.filter(b => b.zone === 'dock')
+    expect(dock.some(b => b.denominator === 1)).toBe(true)  // 1/1 whole log present
     expect(s.blocks.filter(b => b.zone === 'build')).toHaveLength(0)
   })
 })

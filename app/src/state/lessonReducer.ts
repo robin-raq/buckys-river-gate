@@ -135,46 +135,61 @@ export function lessonReducer(state: LessonState, event: LessonEvent): LessonSta
     }
 
     // ────────────────────────────────────────────────────────────────────
-    // DEMO: passive slideshow — Bucky demonstrates before student plays.
-    // Each DIALOGUE_ADVANCE advances one slide. Two slides also mutate
-    // blocks: DEMO_SHOW_LOG (place 1/2 log) and DEMO_CHOP (auto-split).
+    // DEMO: passive slideshow — Bucky demonstrates the fraction hierarchy.
+    // Three chop moments mutate blocks:
+    //   DEMO_CHOP_1: 1×(1/1) → 2×(1/2)
+    //   DEMO_CHOP_2: left 1/2 → 2×(1/4)  [right 1/2 stays]
+    //   DEMO_CHOP_3: right 1/2 → 2×(1/4) [4 quarters total]
+    // All demo blocks are locked (student cannot interact).
     // ────────────────────────────────────────────────────────────────────
     case 'DEMO': {
       if (event.type !== 'DIALOGUE_ADVANCE') return state
 
+      const W = RIVER_WIDTH_PX
+      const lockedBlock = (n: number, d: number, slot: number) =>
+        makeBlock({ numerator: n, denominator: d, pixelWidth: Math.round((n / d) * W),
+                    zone: 'build', slot, splittable: false, selected: false, locked: true })
+
       switch (state.dialogueNodeId) {
+
         case 'DEMO_INTRO': {
-          // Place the demonstration 1/2 log into the build zone
-          const demoLog = makeBlock({
-            numerator:   1,
-            denominator: 2,
-            pixelWidth:  Math.round((1 / 2) * RIVER_WIDTH_PX),
-            zone:        'build',
-            slot:        0,
-            splittable:  false,   // student can't interact with it
-            selected:    false,
-            locked:      true,
-          })
-          return { ...state, dialogueNodeId: 'DEMO_SHOW_LOG', blocks: [demoLog] }
+          // Place a locked 1/1 whole log into the build zone
+          return { ...state, dialogueNodeId: 'DEMO_SHOW_WHOLE', blocks: [lockedBlock(1, 1, 0)] }
         }
 
-        case 'DEMO_SHOW_LOG':
-          return { ...state, dialogueNodeId: 'DEMO_CHOP' }
+        case 'DEMO_SHOW_WHOLE':
+          return { ...state, dialogueNodeId: 'DEMO_CHOP_1' }
 
-        case 'DEMO_CHOP': {
-          // Auto-split the 1/2 log into two 1/4 logs, both in build zone
-          const half = state.blocks.find(b => b.denominator === 2)
-          if (!half) return { ...state, dialogueNodeId: 'DEMO_SHOW_PIECES' }
-          const quarterWidth = Math.round((1 / 4) * RIVER_WIDTH_PX)
-          const pieceA = makeBlock({ numerator: 1, denominator: 4, pixelWidth: quarterWidth, zone: 'build', slot: 0, splittable: false, selected: false, locked: true })
-          const pieceB = makeBlock({ numerator: 1, denominator: 4, pixelWidth: quarterWidth, zone: 'build', slot: 1, splittable: false, selected: false, locked: true })
-          return { ...state, dialogueNodeId: 'DEMO_SHOW_PIECES', blocks: [pieceA, pieceB] }
+        case 'DEMO_CHOP_1': {
+          // Split whole → two halves
+          const halfA = lockedBlock(1, 2, 0)
+          const halfB = lockedBlock(1, 2, 1)
+          return { ...state, dialogueNodeId: 'DEMO_SHOW_HALVES', blocks: [halfA, halfB] }
         }
 
-        case 'DEMO_SHOW_PIECES':
-          return { ...state, dialogueNodeId: 'DEMO_COMBINE' }
+        case 'DEMO_SHOW_HALVES':
+          return { ...state, dialogueNodeId: 'DEMO_CHOP_2' }
 
-        case 'DEMO_COMBINE':
+        case 'DEMO_CHOP_2': {
+          // Split left half → 2 quarters; keep right half
+          const rightHalf = state.blocks.find(b => b.denominator === 2)!
+          const qA = lockedBlock(1, 4, 0)
+          const qB = lockedBlock(1, 4, 1)
+          return { ...state, dialogueNodeId: 'DEMO_SHOW_FIRST_QUARTERS', blocks: [qA, qB, rightHalf] }
+        }
+
+        case 'DEMO_SHOW_FIRST_QUARTERS':
+          return { ...state, dialogueNodeId: 'DEMO_CHOP_3' }
+
+        case 'DEMO_CHOP_3': {
+          // Split right half → 2 more quarters → 4 quarters total
+          const qC = lockedBlock(1, 4, 2)
+          const qD = lockedBlock(1, 4, 3)
+          const existing = state.blocks.filter(b => b.denominator === 4)
+          return { ...state, dialogueNodeId: 'DEMO_SHOW_ALL_QUARTERS', blocks: [...existing, qC, qD] }
+        }
+
+        case 'DEMO_SHOW_ALL_QUARTERS':
           return { ...state, dialogueNodeId: 'DEMO_EQUATION' }
 
         case 'DEMO_EQUATION':
