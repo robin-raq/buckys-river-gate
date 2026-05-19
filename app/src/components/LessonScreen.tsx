@@ -2,11 +2,21 @@ import { useEffect, useRef, useState, type Dispatch } from 'react'
 import type { LessonState } from '../state/types'
 import type { LessonEvent } from '../state/lessonEvents'
 import { getNode }              from '../state/dialogue'
+import { useDialogueEffects }   from '../hooks/useDialogueEffects'
+import { phaseToLessonPhase }   from '../utils/lessonPhase'
+import { TopBar }               from './TopBar'
+import { BuckyAvatar }          from './BuckyAvatar'
+import { PhaseDots }            from './PhaseDots'
 import { SpeechBubble }         from './SpeechBubble'
 import { ReferenceGate }        from './ReferenceGate'
+import { RiverScene }           from './RiverScene'
+import { SnapGuides }           from './SnapGuides'
+import { GoalSidebar }          from './GoalSidebar'
 import { CheckButton }          from './CheckButton'
 import { ChallengeCounter }     from './ChallengeCounter'
 import { Log }                  from './Log'
+import { GhostOverlay }         from './overlays/GhostOverlay'
+import { EquivalenceBadge }     from './overlays/EquivalenceBadge'
 import { RIVER_WIDTH_PX }       from '../constants'
 import {
   playSnapSound,
@@ -39,8 +49,16 @@ const GATE_VISIBLE_PHASES = new Set([
 // How long the EXPLORE free-play phase lasts before auto-advancing (ms)
 const EXPLORE_TIMEOUT_MS = 30_000
 
+const GOAL_SIDEBAR_PHASES = new Set([
+  'INSTRUCT_INTRO', 'INSTRUCT_BUILD', 'INSTRUCT_ERROR', 'INSTRUCT_SUCCESS',
+  'CHECK_INTRO', 'CHECK_ACTIVE', 'CHECK_ERROR_1', 'CHECK_ERROR_2', 'CHECK_SUCCESS',
+])
+
+const EQUATION_NODES = new Set(['DEMO_EQUATION', 'INSTRUCT_NAME_EQUIVALENCE'])
+
 export function LessonScreen({ state, dispatch }: Props) {
   const node          = getNode(state.dialogueNodeId)
+  const effects       = useDialogueEffects(node)
   const dockBlocks    = state.blocks.filter(b => b.zone === 'dock')
   const buildBlocks   = state.blocks.filter(b => b.zone === 'build')
   const isDemo        = state.phase === 'DEMO'
@@ -48,10 +66,16 @@ export function LessonScreen({ state, dispatch }: Props) {
   const isBuildActive = BUILD_PHASES.has(state.phase)
   const isExplore     = state.phase === 'EXPLORE'
   const gateVisible   = GATE_VISIBLE_PHASES.has(state.phase)
+  const goalVisible   = GOAL_SIDEBAR_PHASES.has(state.phase)
   const canSubmit     = state.buildZoneLogs.length > 0
+  const lessonPhase   = phaseToLessonPhase(state.phase)
 
   const { numerator: gn, denominator: gd } = state.referenceGate
   const gateLabel = `← ${gn}/${gd} →`
+
+  const showEquationBadge =
+    effects.triggerBadge || EQUATION_NODES.has(state.dialogueNodeId)
+  const equationText = showEquationBadge ? '1/2 = 2/4' : undefined
 
   // ── Drag state ───────────────────────────────────────────────────────────
   // Tracks the log being dragged from the tray. `moved` flips true once the
@@ -174,45 +198,34 @@ export function LessonScreen({ state, dispatch }: Props) {
         touchAction:   'none',   // prevent browser pan during log drag
       }}>
 
-      {/* ── Top bar ───────────────────────────────────────────────────── */}
-      <div style={{
-        height:         '52px',
-        display:        'flex',
-        alignItems:     'center',
-        justifyContent: 'space-between',
-        padding:        '0 1rem',
-        flexShrink:     0,
-        borderBottom:   '1px solid var(--grid-line)',
-        gap:            '0.5rem',
-      }}>
-        <span style={{ fontWeight: 700, fontSize: '0.95rem', whiteSpace: 'nowrap' }}>
-          🪵 Bucky's River Gate
-        </span>
-
-        {isCheckPhase && (
-          <ChallengeCounter current={state.challengeIndex + 1} total={3} />
-        )}
-
-        {/* EXPLORE: skip button so demo can progress */}
-        {isExplore && (
-          <button
-            onClick={() => dispatch({ type: 'EXPLORE_COMPLETE' })}
-            style={{
-              padding:      '0.3rem 0.8rem',
-              fontSize:     '0.8rem',
-              background:   'transparent',
-              color:        'var(--ui-text)',
-              border:       '1px solid var(--grid-line)',
-              borderRadius: '0.4rem',
-              cursor:       'pointer',
-              opacity:      0.7,
-            }}
-          >
-            Ready! →
-          </button>
-        )}
-
-      </div>
+      <TopBar
+        trailing={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
+            <PhaseDots activePhase={lessonPhase} />
+            {isCheckPhase && (
+              <ChallengeCounter current={state.challengeIndex + 1} total={3} />
+            )}
+            {isExplore && (
+              <button
+                type="button"
+                onClick={() => dispatch({ type: 'EXPLORE_COMPLETE' })}
+                style={{
+                  padding:      '0.3rem 0.8rem',
+                  fontSize:     '0.8rem',
+                  background:   'transparent',
+                  color:        'var(--ui-text)',
+                  border:       '1px solid var(--grid-line)',
+                  borderRadius: '0.4rem',
+                  cursor:       'pointer',
+                  opacity:      0.7,
+                }}
+              >
+                Ready! →
+              </button>
+            )}
+          </div>
+        }
+      />
 
       {/* ── Bucky dialogue ─────────────────────────────────────────────── */}
       <div style={{
@@ -222,20 +235,7 @@ export function LessonScreen({ state, dispatch }: Props) {
         gap:        '0.6rem',
         alignItems: 'flex-start',
       }}>
-        {/* Bucky avatar */}
-        <div style={{
-          width:          '48px',
-          height:         '48px',
-          borderRadius:   '50%',
-          background:     'var(--log-half)',
-          display:        'flex',
-          alignItems:     'center',
-          justifyContent: 'center',
-          fontSize:       '1.6rem',
-          flexShrink:     0,
-        }}>
-          🦫
-        </div>
+        <BuckyAvatar buckyState={node.buckyState} />
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <SpeechBubble
@@ -275,6 +275,7 @@ export function LessonScreen({ state, dispatch }: Props) {
           justifyContent: 'center',   // centres 960px canvas in wide viewports
         }}
       >
+        <div style={{ display: 'flex', alignItems: 'flex-start' }}>
         <div
           ref={scaleRef}
           style={{
@@ -284,8 +285,12 @@ export function LessonScreen({ state, dispatch }: Props) {
             alignItems:     'flex-start',
             padding:        '1.5rem 0 0.75rem',
             gap:            '0.5rem',
+            position:       'relative',
+            minHeight:      '320px',
           }}
         >
+          <EquivalenceBadge visible={showEquationBadge} equation={equationText} />
+          <RiverScene>
           {/* Reference gate — only visible once introduced */}
           {gateVisible && (
             <div style={{ paddingTop: '0.5rem' }}>
@@ -293,6 +298,8 @@ export function LessonScreen({ state, dispatch }: Props) {
                 gate={state.referenceGate}
                 visible={true}
                 label={gateLabel}
+                highlightGap={effects.highlightGap}
+                highlightOverflow={effects.highlightOverflow}
               />
             </div>
           )}
@@ -311,24 +318,23 @@ export function LessonScreen({ state, dispatch }: Props) {
           )}
 
           {/* River row — always shown so logs have somewhere to land */}
-          <div ref={riverRowRef} style={{
-            position:     'relative',       // needed for ghost overlay absolute positioning
+          <div ref={riverRowRef} className="river-row" style={{
+            position:     'relative',
             width:        `${RIVER_WIDTH_PX}px`,
             height:       '80px',
-            background:   'var(--river-water)',
             borderRadius: '8px',
-            border:       '1px solid var(--grid-line)',
             display:      'flex',
             alignItems:   'center',
             padding:      '4px',
             gap:          '4px',
           }}>
+            <SnapGuides visible={isBuildActive && !isDemo} />
             {buildBlocks.length === 0 && !isDemo && (
               <span style={{ opacity: 0.35, fontSize: '0.8rem', paddingLeft: '0.5rem' }}>
                 {isExplore
-                  ? 'Click a log below to place it here'
+                  ? 'Drag a log here — double-tap a placed log to chop'
                   : isBuildActive
-                    ? 'Click logs below to fill the gap →'
+                    ? 'Drag logs to fill the gap →'
                     : ''}
               </span>
             )}
@@ -365,41 +371,16 @@ export function LessonScreen({ state, dispatch }: Props) {
               </div>
             ))}
 
-            {/* Ghost overlay — shown on 2nd CHECK failure to visualise the target width */}
-            {node.showGhostOverlay && (
-              <div
-                data-testid="ghost-overlay"
-                style={{
-                  position:      'absolute',
-                  left:          4,
-                  top:           4,
-                  height:        72,
-                  width:         `${Math.round((gn / gd) * RIVER_WIDTH_PX)}px`,
-                  border:        '2px dashed rgba(52, 211, 153, 0.75)',
-                  borderRadius:  12,
-                  background:    'rgba(52, 211, 153, 0.08)',
-                  pointerEvents: 'none',
-                  zIndex:        2,
-                  display:       'flex',
-                  alignItems:    'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <span style={{
-                  color:      'rgba(52, 211, 153, 0.9)',
-                  fontSize:   '0.9rem',
-                  fontWeight: 700,
-                  textShadow: '0 1px 3px rgba(0,0,0,0.6)',
-                }}>
-                  {gn}/{gd}
-                </span>
-              </div>
-            )}
+            <GhostOverlay
+              visible={effects.showGhostOverlay}
+              gate={state.referenceGate}
+              riverWidthPx={RIVER_WIDTH_PX}
+            />
           </div>
 
           {/* Check button */}
           {isBuildActive && (
-            <div style={{ paddingTop: '0.25rem' }}>
+            <div style={{ paddingTop: '0.25rem', position: 'relative', zIndex: 2 }}>
               <CheckButton
                 label="CHECK"
                 disabled={!canSubmit}
@@ -407,6 +388,14 @@ export function LessonScreen({ state, dispatch }: Props) {
               />
             </div>
           )}
+          </RiverScene>
+        </div>
+
+        <GoalSidebar
+          visible={goalVisible}
+          gateLabel={gateLabel}
+          gate={state.referenceGate}
+        />
         </div>
 
         {/* Win overlay */}
