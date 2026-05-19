@@ -1,0 +1,25 @@
+:root {
+  /* Colors */
+  --bg-deep:          #0D1B2A;
+  --river-water:      #1A3A5C;
+  --grid-line:        #1F4E72;
+  --log-whole:        #8B5E3C;
+  --log-half:         #A0784F;
+  --log-quarter:      #C49A6C;
+  --log-grain:        #6B3F1F;
+  --ref-gate:         #3BADE8;
+  --ref-gate-fill:    #1B6FA8;
+  --success-glow:     #34D399;
+  --error-glow:       #F87171;
+  --bucky-bubble:     #FEFCE8;
+  --bucky-text:       #1C1917;
+  --ui-text:          #E2E8F0;
+
+  /* Layout */
+  --river-width:      960px;
+  --slot-width:       240px;
+  --row-height:       80px;
+  --log-radius:       12px;
+  --top-bar-height:   64px;
+  --tool-tray-height: 224px;
+}
