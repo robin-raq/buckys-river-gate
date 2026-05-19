@@ -1,0 +1,10 @@
+{
+  "name": "superbuilders",
+  "private": true,
+  "scripts": {
+    "test": "npm test --prefix app",
+    "test:watch": "npm run test:watch --prefix app",
+    "dev": "npm run dev --prefix app",
+    "build": "npm run build --prefix app"
+  }
+}
