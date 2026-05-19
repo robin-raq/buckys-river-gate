@@ -114,10 +114,11 @@ export const DIALOGUE: Record<string, DialogueNode> = {
     highlightGap: true,
   },
 
+  // tapToContinue intentionally absent — DIALOGUE_ADVANCE is not handled in
+  // INSTRUCT_BUILD. Student reads this hint then drags logs and hits CHECK.
   INSTRUCT_BUILD_PROMPT: {
     text:       "Drag logs from the tray into Row 1. When it looks right, tap the CHECK button!",
     buckyState: 'encouraging',
-    tapToContinue: true,
   },
 
   INSTRUCT_CORRECT: {
