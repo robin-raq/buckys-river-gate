@@ -19,6 +19,53 @@ export const DIALOGUE: Record<string, DialogueNode> = {
     buckyState: 'idle',
   },
 
+  // ── DEMO ──────────────────────────────────────────────────────────────────
+  // Bucky demonstrates before the student touches anything.
+  // All nodes are tap-to-continue. The reducer drives block mutations
+  // at DEMO_SHOW_LOG (add 1/2 log) and DEMO_CHOP (auto-split into 1/4s).
+
+  DEMO_INTRO: {
+    text:          "Hey there, Builder! I'm Bucky. I protect this river village by building log gates.",
+    buckyState:    'excited',
+    tapToContinue: true,
+  },
+
+  DEMO_SHOW_LOG: {
+    text:          "See this log? It covers exactly half the river. We call it a one-half log.",
+    buckyState:    'idle',
+    tapToContinue: true,
+  },
+
+  DEMO_CHOP: {
+    text:          "Watch this!",
+    buckyState:    'chop-swing',
+    tapToContinue: true,
+  },
+
+  DEMO_SHOW_PIECES: {
+    text:          "That big log split into two equal sticks! The pieces are smaller now...",
+    buckyState:    'excited',
+    tapToContinue: true,
+  },
+
+  DEMO_COMBINE: {
+    text:          "But together, they still cover the exact same river space!",
+    buckyState:    'build-stack',
+    tapToContinue: true,
+  },
+
+  DEMO_EQUATION: {
+    text:          "One half-log matches two quarter-logs. Same space. Different pieces!",
+    buckyState:    'excited',
+    tapToContinue: true,
+  },
+
+  DEMO_HANDOFF: {
+    text:          "Now YOU try! Grab the logs below and snap them into the river.",
+    buckyState:    'encouraging',
+    tapToContinue: true,
+  },
+
   // ── EXPLORE ──────────────────────────────────────────────────────────────
 
   EXPLORE_INTRO: {

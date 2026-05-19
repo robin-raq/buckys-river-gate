@@ -23,6 +23,7 @@ export interface BlockState {
 
 export type Phase =
   | 'BOOT'
+  | 'DEMO'
   | 'EXPLORE'
   | 'EXPLORE_END'
   | 'INSTRUCT_INTRO'

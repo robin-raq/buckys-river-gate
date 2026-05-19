@@ -43,6 +43,7 @@ export function LessonScreen({ state, dispatch }: Props) {
   const node          = getNode(state.dialogueNodeId)
   const dockBlocks    = state.blocks.filter(b => b.zone === 'dock')
   const buildBlocks   = state.blocks.filter(b => b.zone === 'build')
+  const isDemo        = state.phase === 'DEMO'
   const isCheckPhase  = CHECK_PHASES.has(state.phase)
   const isBuildActive = BUILD_PHASES.has(state.phase)
   const isExplore     = state.phase === 'EXPLORE'
@@ -244,6 +245,19 @@ export function LessonScreen({ state, dispatch }: Props) {
             </div>
           )}
 
+          {/* Demo label — tells student this is Bucky's demonstration */}
+          {isDemo && (
+            <div style={{
+              fontSize:    '0.7rem',
+              opacity:     0.55,
+              letterSpacing: '0.08em',
+              paddingLeft: '0.25rem',
+              color:       'var(--ui-text)',
+            }}>
+              BUCKY'S DEMO ↓
+            </div>
+          )}
+
           {/* River row — always shown so logs have somewhere to land */}
           <div style={{
             width:        `${RIVER_WIDTH_PX}px`,
@@ -256,7 +270,7 @@ export function LessonScreen({ state, dispatch }: Props) {
             padding:      '4px',
             gap:          '4px',
           }}>
-            {buildBlocks.length === 0 && (
+            {buildBlocks.length === 0 && !isDemo && (
               <span style={{ opacity: 0.35, fontSize: '0.8rem', paddingLeft: '0.5rem' }}>
                 {isExplore
                   ? 'Click a log below to place it here'
@@ -266,9 +280,10 @@ export function LessonScreen({ state, dispatch }: Props) {
               </span>
             )}
             {buildBlocks.map(b => (
+              // In DEMO: logs are read-only — no remove button, no interaction
               <div key={b.id} style={{ position: 'relative', flexShrink: 0 }}>
                 <Log block={b} dispatch={dispatch} />
-                {/* Always show × so students know they can remove logs */}
+                {!isDemo && (
                 <button
                   onClick={() => dispatch({ type: 'LOG_RETURNED', blockId: b.id })}
                   style={{
@@ -293,6 +308,7 @@ export function LessonScreen({ state, dispatch }: Props) {
                 >
                   ×
                 </button>
+                )}
               </div>
             ))}
           </div>
@@ -343,8 +359,8 @@ export function LessonScreen({ state, dispatch }: Props) {
         )}
       </div>
 
-      {/* ── Dock tray ──────────────────────────────────────────────────── */}
-      <div style={{
+      {/* ── Dock tray — hidden during DEMO (Bucky is demonstrating) ───── */}
+      {!isDemo && <div style={{
         minHeight:    '120px',
         maxHeight:    '160px',
         background:   '#0a1520',
@@ -419,7 +435,7 @@ export function LessonScreen({ state, dispatch }: Props) {
             ← Undo
           </button>
         )}
-      </div>
+      </div>}
     </div>
   )
 }

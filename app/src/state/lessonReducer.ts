@@ -1,7 +1,7 @@
 import type { LessonState, BlockState, FractionValue } from './types'
 import type { LessonEvent } from './lessonEvents'
 import { CHECK_CHALLENGES } from './checkChallenges'
-import { initLessonState, makeInventory, INSTRUCT_INVENTORY } from './initialState'
+import { initLessonState, makeBlock, makeInventory, INSTRUCT_INVENTORY, EXPLORE_INVENTORY } from './initialState'
 import {
   validateBuildZone,
   detectWrongType,
@@ -127,10 +127,69 @@ export function lessonReducer(state: LessonState, event: LessonEvent): LessonSta
       if (event.type !== 'START') return state
       return {
         ...state,
-        phase:            'EXPLORE',
-        dialogueNodeId:   'EXPLORE_INTRO',
-        audioUnlocked:    true,
-        exploreStartTime: Date.now(),
+        phase:          'DEMO',
+        dialogueNodeId: 'DEMO_INTRO',
+        audioUnlocked:  true,
+        blocks:         [],   // river is empty until Bucky places the demo log
+      }
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // DEMO: passive slideshow — Bucky demonstrates before student plays.
+    // Each DIALOGUE_ADVANCE advances one slide. Two slides also mutate
+    // blocks: DEMO_SHOW_LOG (place 1/2 log) and DEMO_CHOP (auto-split).
+    // ────────────────────────────────────────────────────────────────────
+    case 'DEMO': {
+      if (event.type !== 'DIALOGUE_ADVANCE') return state
+
+      switch (state.dialogueNodeId) {
+        case 'DEMO_INTRO': {
+          // Place the demonstration 1/2 log into the build zone
+          const demoLog = makeBlock({
+            numerator:   1,
+            denominator: 2,
+            pixelWidth:  Math.round((1 / 2) * RIVER_WIDTH_PX),
+            zone:        'build',
+            slot:        0,
+            splittable:  false,   // student can't interact with it
+            selected:    false,
+            locked:      true,
+          })
+          return { ...state, dialogueNodeId: 'DEMO_SHOW_LOG', blocks: [demoLog] }
+        }
+
+        case 'DEMO_SHOW_LOG':
+          return { ...state, dialogueNodeId: 'DEMO_CHOP' }
+
+        case 'DEMO_CHOP': {
+          // Auto-split the 1/2 log into two 1/4 logs, both in build zone
+          const half = state.blocks.find(b => b.denominator === 2)
+          if (!half) return { ...state, dialogueNodeId: 'DEMO_SHOW_PIECES' }
+          const quarterWidth = Math.round((1 / 4) * RIVER_WIDTH_PX)
+          const pieceA = makeBlock({ numerator: 1, denominator: 4, pixelWidth: quarterWidth, zone: 'build', slot: 0, splittable: false, selected: false, locked: true })
+          const pieceB = makeBlock({ numerator: 1, denominator: 4, pixelWidth: quarterWidth, zone: 'build', slot: 1, splittable: false, selected: false, locked: true })
+          return { ...state, dialogueNodeId: 'DEMO_SHOW_PIECES', blocks: [pieceA, pieceB] }
+        }
+
+        case 'DEMO_SHOW_PIECES':
+          return { ...state, dialogueNodeId: 'DEMO_COMBINE' }
+
+        case 'DEMO_COMBINE':
+          return { ...state, dialogueNodeId: 'DEMO_EQUATION' }
+
+        case 'DEMO_EQUATION':
+          return { ...state, dialogueNodeId: 'DEMO_HANDOFF' }
+
+        case 'DEMO_HANDOFF':
+          return {
+            ...state,
+            phase:            'EXPLORE',
+            dialogueNodeId:   'EXPLORE_INTRO',
+            blocks:           makeInventory(EXPLORE_INVENTORY),
+            exploreStartTime: Date.now(),
+          }
+
+        default: return state
       }
     }
 
