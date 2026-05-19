@@ -151,7 +151,7 @@ export function LessonScreen({ state, dispatch }: Props) {
       const available = outer.clientWidth
       const scale     = Math.min(1, available / RIVER_WIDTH_PX)
       inner.style.transform       = `scale(${scale})`
-      inner.style.transformOrigin = 'top left'
+      inner.style.transformOrigin = 'top center'
       outer.style.height          = `${inner.offsetHeight * scale}px`
     }
     applyScale()
@@ -266,11 +266,13 @@ export function LessonScreen({ state, dispatch }: Props) {
       <div
         ref={canvasRef}
         style={{
-          flex:      1,
-          width:     '100%',
-          overflow:  'hidden',
-          position:  'relative',
-          flexShrink: 1,
+          flex:           1,
+          width:          '100%',
+          overflow:       'hidden',
+          position:       'relative',
+          flexShrink:     1,
+          display:        'flex',
+          justifyContent: 'center',   // centres 960px canvas in wide viewports
         }}
       >
         <div
@@ -310,6 +312,7 @@ export function LessonScreen({ state, dispatch }: Props) {
 
           {/* River row — always shown so logs have somewhere to land */}
           <div ref={riverRowRef} style={{
+            position:     'relative',       // needed for ghost overlay absolute positioning
             width:        `${RIVER_WIDTH_PX}px`,
             height:       '80px',
             background:   'var(--river-water)',
@@ -361,6 +364,37 @@ export function LessonScreen({ state, dispatch }: Props) {
                 )}
               </div>
             ))}
+
+            {/* Ghost overlay — shown on 2nd CHECK failure to visualise the target width */}
+            {node.showGhostOverlay && (
+              <div
+                data-testid="ghost-overlay"
+                style={{
+                  position:      'absolute',
+                  left:          4,
+                  top:           4,
+                  height:        72,
+                  width:         `${Math.round((gn / gd) * RIVER_WIDTH_PX)}px`,
+                  border:        '2px dashed rgba(52, 211, 153, 0.75)',
+                  borderRadius:  12,
+                  background:    'rgba(52, 211, 153, 0.08)',
+                  pointerEvents: 'none',
+                  zIndex:        2,
+                  display:       'flex',
+                  alignItems:    'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <span style={{
+                  color:      'rgba(52, 211, 153, 0.9)',
+                  fontSize:   '0.9rem',
+                  fontWeight: 700,
+                  textShadow: '0 1px 3px rgba(0,0,0,0.6)',
+                }}>
+                  {gn}/{gd}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Check button */}
