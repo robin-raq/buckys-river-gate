@@ -1,39 +1,33 @@
-import { RIVER_WIDTH_PX, SLOT_WIDTH_PX } from '../constants'
-
+/**
+ * SnapGuides — dashed lane dividers rendered ON TOP of the scene plate.
+ *
+ * The background image (bucky-background.png) is intentionally lane-free,
+ * so this overlay owns the lane geometry. Lanes align to the same
+ * coordinate system as placed logs (via --zone-lane-inset / --zone-river-top
+ * / --log-h in kawaii-theme.css), so a log dropped into lane N covers
+ * exactly the same pixels the lane divider used to span.
+ *
+ * Visible during INSTRUCT_BUILD / CHECK_ACTIVE / DEMO chop moments.
+ * Hidden in WIN, intro dialogues, etc.
+ */
 interface SnapGuidesProps {
   visible:    boolean
-  slotCount?: number
+  slotCount?: number   // default 4 (whole / halves×2 / quarters×4)
 }
 
 export function SnapGuides({ visible, slotCount = 4 }: SnapGuidesProps) {
-  const columns = Array.from({ length: slotCount }, (_, i) => i)
-
   return (
     <div
       data-testid="snap-guides"
       className="snap-guides"
       aria-hidden={!visible}
-      style={{
-        visibility:  visible ? 'visible' : 'hidden',
-        position:    'absolute',
-        inset:       0,
-        display:     'flex',
-        width:       `${RIVER_WIDTH_PX}px`,
-        pointerEvents: 'none',
-      }}
+      style={{ visibility: visible ? 'visible' : 'hidden' }}
     >
-      {columns.map((slot) => (
+      {Array.from({ length: slotCount - 1 }, (_, i) => (
         <div
-          key={slot}
-          className="snap-guides__column"
-          style={{
-            width:       `${SLOT_WIDTH_PX}px`,
-            height:      '100%',
-            borderRight: slot < slotCount - 1
-              ? '1px dashed var(--grid-line, #1F4E72)'
-              : undefined,
-            boxSizing:   'border-box',
-          }}
+          key={i}
+          className="snap-guides__divider"
+          style={{ left: `${((i + 1) / slotCount) * 100}%` }}
         />
       ))}
     </div>

@@ -22,21 +22,45 @@
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
-/* Equivalence badge — "= equation" slam on correct CHECK */
+/* Equivalence badge — "= equation" slam on correct CHECK and recap.
+   Defaults to BELOW the river-row (the historical position). The
+   --above variant overrides `top` to sit above the row, used on
+   recap beats where a reference log lives below. */
 .equivalence-badge {
   position: absolute;
-  top: 50%;
+  top: calc(var(--zone-river-top) + var(--log-h) + 72px);
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 10;
-  font-size: 2rem;
-  font-weight: 700;
-  color: #fbbf24;
-  text-shadow: 0 0 24px rgba(251, 191, 36, 0.8);
+  /* clamp() lets the longest equation (e.g. "1/4 + 1/4 + 1/4 + 1/4 = 1
+     whole" ≈ 31 chars) shrink to fit narrower viewports while shorter
+     equations stay big on wide screens. Paired with `nowrap` so the
+     equation never breaks mid-fraction. */
+  font-size: clamp(1.15rem, 2.9vw, 2.25rem);
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-weight: 400;
+  color: #ff8fab;
+  /* Stronger multi-layer glow — outer warm pink halo + bright white
+     bloom + the classic letterpress-style rose shadow. Static (no
+     animation on text-shadow itself), so this stays GPU-cheap even
+     when the badge is also pulsing via opacity. */
+  text-shadow:
+    0 0 14px rgba(255, 143, 171, 1),
+    0 0 32px rgba(255, 143, 171, 0.75),
+    0 0 48px rgba(255, 255, 255, 0.55),
+    0 3px 0  #e11d48;
   border: none;
   background: transparent;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
+}
+
+/* Above-row variant — used on DEMO_REVIEW_HALF where the reference
+   log sits below. Reading order top→bottom becomes: equation →
+   highlighted real logs → faded reference. */
+.equivalence-badge--above {
+  top: calc(var(--zone-river-top) - 56px);
 }
 
 .equivalence-badge-slam {
@@ -52,4 +76,180 @@
     transform: translate(-50%, -50%) scale(1);
     opacity: 1;
   }
+}
+
+/* Flashing variant — for beats where the equation IS the lesson (e.g.
+   DEMO_SHOW_HALVES showing the chain 1/2 + 1/2 = 2/2 = 1/1 = whole).
+   Overrides the slam-only animation with a two-track shorthand:
+     1) slam-in once (0.5s) — same entrance as the default,
+     2) flash pulse forever after (1s loop, started after a 0.5s delay).
+   The `both` fill-mode on the first track preserves scale(1)+opacity(1)
+   between the two animations so the badge doesn't snap. Opacity + scale
+   only — GPU-cheap. */
+.equivalence-badge--flash {
+  animation:
+    equivalence-badge-slam 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+    equivalence-badge-flash 1s ease-in-out 0.5s infinite;
+}
+
+@keyframes equivalence-badge-flash {
+  0%, 100% { opacity: 1;    transform: translate(-50%, -50%) scale(1);    }
+  50%      { opacity: 0.55; transform: translate(-50%, -50%) scale(1.05); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .equivalence-badge--flash {
+    animation: equivalence-badge-slam 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+}
+
+/* ── DEMO recap glow ────────────────────────────────────────────────────────
+   QuartersHighlight overlay. Renders inside .river-row (which is
+   position:absolute, so a position:absolute child anchors to it).
+   first-half spans 2 logs (50% width); all spans all 4 (100%).
+   The width transition is what makes the glow visibly "widen" when
+   the recap moves from Beat A to Beat B.
+
+   Border is SOLID (not dashed) and thick — earlier dashed-2px version
+   visually collided with the lane dividers printed inside each log
+   and read as "more log decoration" rather than as a highlight. The
+   inner white halo lifts the rectangle off the warm wood tones; the
+   outer pink glow ties it to the pink equation badge thematically.
+
+   Animation is opacity-only — GPU-cheap (no per-frame raster) so we
+   don't recreate the Bucky filter-on-animation CPU problem. The static
+   box-shadow doesn't repaint between keyframes because opacity is
+   applied to the composited surface as a whole. */
+.quarters-highlight {
+  position: absolute;
+  top: -14px;
+  bottom: -14px;
+  left: -10px;
+  z-index: 4;
+  pointer-events: none;
+  box-sizing: border-box;
+  border: 4px solid #e11d48;
+  background: rgba(225, 29, 72, 0.10);
+  border-radius: 22px;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.7),
+    0 0 22px 4px rgba(225, 29, 72, 0.45);
+  transition: width 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: quarters-highlight-pulse 1.6s ease-in-out infinite;
+}
+
+/* Width includes a horizontal pad. Beat A's right edge sits AT 50% so
+   the highlight doesn't crowd the 3rd quarter; only Beat B (which
+   covers all 4) extends past 100% on the right too. */
+.quarters-highlight--first-half { width: calc(50%  + 10px); }
+.quarters-highlight--all        { width: calc(100% + 20px); }
+
+@keyframes quarters-highlight-pulse {
+  0%, 100% { opacity: 0.7; }
+  50%      { opacity: 1;   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quarters-highlight {
+    animation: none;
+    transition: none;
+    opacity: 0.9;
+  }
+}
+
+/* ── Chop line ─────────────────────────────────────────────────────────────
+   Anticipatory red guide drawn through the center of the splittable block
+   in the river-row. Telegraphs where the chop will land. The pulse +
+   slight vertical scale make it feel "alive" — a sharp tool poised to
+   strike. Animation is opacity + transform only, so the static box-shadow
+   never re-rasterizes per frame. */
+.chop-line {
+  position: absolute;
+  /* Extends well past the log on both sides so it reads as a deliberate
+     cut through the water column, not a tick mark hugging the log. */
+  top:    -36px;
+  bottom: -36px;
+  width:  4px;
+  transform: translateX(-50%);
+  /* Dotted stripe via repeating gradient — gives a consistent dot
+     pattern across browsers (CSS `border-style: dotted` renders
+     differently in Chrome vs Firefox). 6px dash + 6px gap. */
+  background: repeating-linear-gradient(
+    to bottom,
+    #ffffff      0,
+    #ffffff      6px,
+    transparent  6px,
+    transparent 12px
+  );
+  border-radius: 3px;
+  z-index: 7;
+  pointer-events: none;
+  /* White halo on cyan water reads as a beam of light. Continuous halo
+     ties the discrete dashes together into one glowing slot. */
+  box-shadow:
+    0 0 8px  rgba(255, 255, 255, 0.85),
+    0 0 18px rgba(255, 255, 255, 0.55);
+  animation: chop-line-pulse 0.7s ease-in-out infinite;
+}
+
+@keyframes chop-line-pulse {
+  0%, 100% { opacity: 0.65; transform: translateX(-50%) scaleY(0.94); }
+  50%      { opacity: 1;    transform: translateX(-50%) scaleY(1.06); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chop-line {
+    animation: none;
+    opacity: 0.9;
+  }
+}
+
+/* ── Reference log ─────────────────────────────────────────────────────────
+   Faded log silhouette floating above the river-row. Visually proves
+   equivalence by sitting a "1/2"-shaped log directly above two
+   highlighted "1/4" logs. Decorative only — no pointer events.
+
+   Anchored inside .river-row at bottom: 100% so the log sits above the
+   row's top edge with a small gap. Width is set inline by the
+   component (matches the fraction's share of the row). */
+.reference-log-anchor {
+  position: absolute;
+  left: 0;
+  pointer-events: none;
+  z-index: 5;
+  box-sizing: border-box;
+  /* No frame — earlier iteration wrapped this in a pink border + halo
+     to match .quarters-highlight, but the user feedback was that the
+     red boxes felt overdone. The faded log silhouette alone (plus
+     the row's own outline) carries the visual structure now. */
+}
+
+/* Position variants — reference floats above the row, below the row,
+   or fills the row's empty right half inline. */
+.reference-log-anchor--above        { bottom: calc(100% + 36px); }
+.reference-log-anchor--below        { top:    calc(100% + 36px); }
+
+/* Inline-right: drop out of absolute positioning so the wrapper joins
+   the row's flex flow as a sibling of the real-log wrappers. Flex's
+   align-items: center on .river-row handles vertical alignment, so
+   the reference sits on the exact same baseline as the 1/4 logs. */
+.reference-log-anchor--inline-right {
+  position: static;
+  flex-shrink: 0;
+}
+
+/* All reference-log overrides use a DESCENDANT selector
+   (`.reference-log-anchor .log`) which has specificity (0,2,0), beating
+   the (0,1,0) of `.log--half`/`.log--quarter`. With equal specificity
+   between size classes and a per-element class, the later-defined rule
+   was inconsistently winning — using descendant selectors makes the
+   override deterministic. */
+.reference-log-anchor .log {
+  /* Override pixel-based widths from .log--half etc. so the wrapper's
+     % width drives the rendered size. */
+  width: 100%;
+  height: var(--log-h);
+  /* Same color as the real quarter logs — identical color reinforces
+     "same thing in different forms" with zero visual hierarchy. */
+  --log-fill: var(--log-quarter);
 }

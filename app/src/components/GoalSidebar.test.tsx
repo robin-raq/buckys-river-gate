@@ -17,7 +17,7 @@ describe('GoalSidebar', () => {
       <GoalSidebar visible={true} gateLabel="← 1/2 →" gate={half} />,
     )
     expect(screen.getByTestId('goal-sidebar')).toBeVisible()
-    expect(screen.getByText('GOAL')).toBeInTheDocument()
+    expect(screen.getByText(/^Goal$/i)).toBeInTheDocument()
     expect(screen.getByText('← 1/2 →')).toBeInTheDocument()
   })
 })

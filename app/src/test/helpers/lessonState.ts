@@ -16,7 +16,10 @@ export function makeLessonState(overrides: Partial<LessonState> = {}): LessonSta
     exploreStartTime:    0,
     audioUnlocked:       true,
     errorType:           null,
+    chopCount:           0,
     log:                 [],
+    history:             [],
+    bonusOffered:        false,
     ...overrides,
   }
 }

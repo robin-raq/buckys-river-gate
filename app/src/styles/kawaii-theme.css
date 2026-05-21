@@ -1,0 +1,911 @@
+/* Kawaii UI — rounded, pastel, soft shadows (inspired by mockups, built in React/CSS) */
+
+/* Scene plate — bucky-background.png is the game board itself.
+   River, dock, and banks are pixels in the PNG (no baked lane dashes).
+   Game UI elements are absolutely-positioned overlays anchored to
+   percentage zones in the image. */
+:root {
+  --scene-bg-url: url('/bucky-background.png');
+
+  /* Log proportions — 1/4 = unit, 1/2 = 2u, 1/1 = 4u */
+  --log-unit: 64px;
+  --log-quarter-w: var(--log-unit);
+  --log-half-w:    calc(var(--log-unit) * 2);
+  --log-whole-w:   calc(var(--log-unit) * 4);
+  --log-h: 64px;
+
+  /* Scene anchor positions (tune these to retarget against a new bg).
+     --zone-lane-inset matches where the bank stones sit in the PNG at
+     the river-row's vertical level, so a full-width (1/1) log lands its
+     edges right at the rocks — no overlap, no gap.
+
+     During INSTRUCT/CHECK: the gate sits ABOVE the row (showing the
+     target width), the row is below as the drop container. The row
+     is positioned at the river's narrow upper band so log edges touch
+     the bank stones on both sides. */
+  --zone-lane-inset:   13%;
+  --zone-river-top:    40%;   /* placed logs row — touches rocks on each side */
+  /* Gate sits BELOW the row, left-aligned with it, so it reads as
+     "this is the width of what I need to fill" sitting directly under
+     "this is where the logs go." 32px clearance leaves room for the
+     ← 1/2 → label (which sits above the gate line, -1.65rem ≈ -26px)
+     to clear the row's bottom border without overlapping. */
+  --zone-gate-top:     calc(var(--zone-river-top) + var(--log-h) + 32px);
+  --zone-dock-bottom:  5%;
+  --zone-bucky-bottom: 14%;
+  --zone-bucky-right:  4%;   /* Bucky now sits on the RIGHT bank */
+  --zone-bucky-width:  19%;
+}
+
+.lesson-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  position: relative;
+  color: var(--ui-text);
+  font-family: var(--font-body);
+  overflow: hidden;
+  touch-action: none;
+  /* Full-viewport environment plate — game UI layers above */
+  background-color: var(--bg-deep);
+  background-image: var(--scene-bg-url);
+  background-size: cover;
+  background-position: center bottom;
+  background-repeat: no-repeat;
+}
+
+.lesson-main {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+/* Stage is now a positioning context only — children use absolute
+   percentage anchors against the scene plate, not flex flow. */
+.lesson-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+.lesson-stage > * { pointer-events: auto; }
+
+/* ── Top bar ── */
+.top-bar {
+  height: var(--top-bar-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  border-bottom: 2px solid rgba(255, 179, 217, 0.25);
+  gap: 0.5rem;
+}
+
+/* Left group — keeps the back button (when visible) and the title
+   side-by-side instead of letting flex's space-between push them apart. */
+.top-bar__leading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.top-bar__title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1rem;
+  white-space: nowrap;
+  color: var(--ui-text);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.2);
+  letter-spacing: 0.02em;
+}
+
+/* Back button — top-left navigation chrome. Subtler than primary
+   buttons (it's metanavigation, not a lesson action), but still
+   uses the kawaii pill shape for consistency. */
+.btn-back {
+  font-size: 0.85rem;
+  padding: 0.3rem 0.85rem;
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--ui-text-dark, #4a3530);
+  border: 2px solid rgba(255, 179, 217, 0.5);
+}
+.btn-back:hover  { background: #fff; }
+.btn-back:active { transform: translateY(1px); }
+
+.chops-counter {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--accent-peach);
+  background: rgba(255, 200, 162, 0.2);
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  border: 2px solid rgba(255, 200, 162, 0.45);
+  font-family: var(--font-display);
+}
+
+/* ── Phase dots ── */
+.phase-dots {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.7rem;
+  font-family: var(--font-display);
+}
+
+.phase-dots__item {
+  opacity: 0.4;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.phase-dots__item--active {
+  opacity: 1;
+  color: var(--accent-mint);
+  transform: scale(1.05);
+}
+
+/* ── Speech bubble ── */
+.speech-bubble {
+  background: var(--bucky-bubble);
+  color: var(--bucky-text);
+  border: 3px solid var(--bucky-bubble-border);
+  border-radius: 1.25rem 1.25rem 1.25rem 0.35rem;
+  padding: 0.85rem 1.1rem;
+  font-size: 1rem;
+  line-height: 1.55;
+  max-width: min(480px, 55vw);
+  box-shadow: var(--shadow-soft);
+  font-weight: 600;
+  position: relative;
+}
+
+.speech-bubble::after {
+  content: '';
+  position: absolute;
+  left: -10px;
+  bottom: 12px;
+  border: 10px solid transparent;
+  border-right-color: var(--bucky-bubble-border);
+}
+
+.speech-bubble::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  bottom: 14px;
+  border: 8px solid transparent;
+  border-right-color: var(--bucky-bubble);
+  z-index: 1;
+}
+
+.lesson-speech-anchor {
+  position: absolute;
+  top: 9%;
+  right: 28%;
+  max-width: min(480px, 52vw);
+  z-index: 30;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.35));
+}
+
+/* Tail points down-right toward Bucky on the right bank. The sharp
+   corner is bottom-RIGHT so the bubble visually "leans into" Bucky. */
+.lesson-speech-anchor .speech-bubble {
+  border-radius: 1.25rem 1.25rem 0.35rem 1.25rem;
+}
+
+.lesson-speech-anchor .speech-bubble::after {
+  right: 18%;
+  left: auto;
+  bottom: -10px;
+  top: auto;
+  border: 10px solid transparent;
+  border-top-color: var(--bucky-bubble-border);
+  border-left-color: transparent;
+}
+
+.lesson-speech-anchor .speech-bubble::before {
+  right: 19%;
+  left: auto;
+  bottom: -6px;
+  top: auto;
+  border: 8px solid transparent;
+  border-top-color: var(--bucky-bubble);
+  border-left-color: transparent;
+}
+
+/* Bucky lives on the RIGHT bank. He's a sprite layered on top of the
+   scene plate so he can animate per dialogue state (wave/chop/cheer/think).
+   We don't force the avatar width via CSS — BuckyAvatar's `size` prop
+   drives the actual pixel dimensions. */
+.lesson-bucky-anchor {
+  position: absolute;
+  bottom: var(--zone-bucky-bottom);
+  right: var(--zone-bucky-right);
+  z-index: 24;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.45));
+  pointer-events: none;
+}
+
+/* When dialogue is waiting for the kid to advance, Bucky himself becomes
+   the "tap to continue" affordance — gentle pulse + pointer cursor + a
+   "tap me" indicator. No floating chrome button required. */
+.lesson-bucky-anchor--waiting {
+  pointer-events: auto;
+  cursor: pointer;
+  /* `manipulation` disables iOS's 300ms double-tap-zoom delay on this
+     element — taps fire instantly, no waiting for a possible second tap. */
+  touch-action: manipulation;
+  animation: bucky-pulse 1.6s ease-in-out infinite;
+}
+/* The <object> embeds the SVG document, which by default captures pointer
+   events itself (clicks land on the SVG, not on the wrapper). Force pointer
+   events to pass through so the anchor's onClick handler fires immediately
+   on tap — fixes the "slow tap" perception where the first tap was lost. */
+.lesson-bucky-anchor--waiting .bucky-art {
+  pointer-events: none;
+}
+/* Immediate visual feedback on tap — the kid sees their tap landed before
+   the state transition completes. Avoids the "did it register?" doubt. */
+.lesson-bucky-anchor--waiting:active {
+  animation: none;
+  transform: scale(0.96);
+  transition: transform 80ms ease-out;
+}
+.lesson-bucky-anchor--waiting::after {
+  content: '✦ tap me';
+  position: absolute;
+  top: -1.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  color: #fff8eb;
+  background: rgba(120, 68, 40, 0.85);
+  border: 2px solid rgba(255, 210, 150, 0.6);
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  animation: bucky-hint-fade 1.6s ease-in-out infinite;
+}
+.lesson-bucky-anchor--waiting:focus-visible {
+  outline: 3px solid var(--accent-mint);
+  outline-offset: 4px;
+  border-radius: 16px;
+}
+
+@keyframes bucky-pulse {
+  0%, 100% { transform: scale(1)    translateY(0);   }
+  50%      { transform: scale(1.04) translateY(-4px); }
+}
+@keyframes bucky-hint-fade {
+  0%, 100% { opacity: 0;   transform: translate(-50%, 4px); }
+  50%      { opacity: 0.9; transform: translate(-50%, 0); }
+}
+
+/* ── Whole-log reference — a faded outline showing the FULL river width.
+   Gives the kid a visual anchor: "this is what one whole log measures."
+   The gate sits INSIDE this outline at (num/denom)% of its width, so
+   "fill half the river" reads as obvious geometric comparison.
+   Positioned slightly above the river-row so it doesn't overlap placed logs. */
+.whole-log-reference {
+  position: absolute;
+  top: calc(var(--zone-river-top) - 56px);
+  left: var(--zone-lane-inset);
+  right: var(--zone-lane-inset);
+  height: 40px;
+  border: 3px dashed rgba(255, 255, 255, 0.55);
+  border-radius: 24px / 12px;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 4;
+  box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.15);
+}
+.whole-log-reference__label {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45), 0 0 8px rgba(0, 0, 0, 0.4);
+  letter-spacing: 0.05em;
+}
+
+/* Lane numbers (1, 2, 3, 4) sit directly under the river-row, anchoring
+   each lane to a positional label so the kid can say "I put my piece in
+   lane 2." Numbers align with the dashed lane centers. */
+.lane-numbers {
+  position: absolute;
+  top: calc(var(--zone-river-top) + var(--log-h) + 8px);
+  left: var(--zone-lane-inset);
+  right: var(--zone-lane-inset);
+  display: flex;
+  z-index: 5;
+  pointer-events: none;
+}
+.lane-numbers__cell {
+  flex: 1 0 25%;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #fff;
+  text-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.55),
+    0 0 8px rgba(0, 0, 0, 0.45);
+}
+
+/* "GOAL" label appears to the right of the row, anchored at row's
+   vertical center, just outside the lane-inset edge. */
+.lane-goal-label {
+  position: absolute;
+  top: calc(var(--zone-river-top) + var(--log-h) / 2);
+  right: calc(var(--zone-lane-inset) - 56px);
+  transform: translateY(-50%);
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* ── SnapGuides — dashed lane dividers, rendered above the scene plate ──
+   Shares the river-row coordinate system so logs and lanes line up
+   exactly. (1/N) of the band = one lane; dividers sit between lanes. */
+.snap-guides {
+  position: absolute;
+  top: var(--zone-river-top);
+  left: var(--zone-lane-inset);
+  right: var(--zone-lane-inset);
+  height: var(--log-h);
+  pointer-events: none;
+  z-index: 4;   /* below logs (6) and gate (5), above scene plate */
+}
+
+.snap-guides__divider {
+  position: absolute;
+  top: -8%;
+  bottom: -8%;
+  width: 2px;
+  border-left: 2px dashed rgba(255, 255, 255, 0.85);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+}
+
+/* ── Reference gate anchor — sits above the placed logs in the river ──
+   The gate's width comes from its own inline style (RIVER_WIDTH_PX-based),
+   so we override it via the !important fallback below to use percentage. */
+.lesson-gate-anchor {
+  position: absolute;
+  top: var(--zone-gate-top);
+  left: var(--zone-lane-inset);
+  right: var(--zone-lane-inset);
+  display: flex;
+  /* Left-aligned so the gate hugs the same left edge as the placed
+     logs (which use justify-content: flex-start in the row). When a
+     1/2 log lands, it sits DIRECTLY above its matching gate width —
+     no eye-jump needed to confirm "log width = gate width." */
+  justify-content: flex-start;
+  z-index: 5;
+  pointer-events: none;
+}
+.lesson-gate-anchor .reference-gate {
+  /* Width is a percentage of the lane band, matching how the placed logs
+     are sized — so a 1/2 gate spans exactly the same as two 1/2 logs. */
+  width: var(--gate-width-pct, 50%) !important;
+  height: 12px;
+}
+
+/* ── River build row — placed logs ride the reference gate line ──
+   Width is the lane band on bucky-background.png (NOT the
+   full river — the lanes only cover the central water section, the
+   banks/grass occupy the outer ~24% on each side). Placed-log wrappers
+   use flex-basis = (num/denom)*100%, so multiple logs naturally fill
+   the row (e.g. 1/2 + 1/2 = 100%). */
+.river-row {
+  position: absolute;
+  top: var(--zone-river-top);
+  left: var(--zone-lane-inset);
+  right: var(--zone-lane-inset);
+  height: var(--log-h);
+  display: flex;
+  align-items: center;
+  /* Placed logs anchor to the LEFT bank — partial fills read as "this
+     quarter of the gate is taken, the rest is open." A centered partial
+     fill confuses the kid: "where does this fraction start?" */
+  justify-content: flex-start;
+  gap: 0;
+  background: transparent;
+  /* White border reads cleanly on the cyan water — much higher contrast
+     than the previous sky-blue, and color-neutral so it doesn't compete
+     with the cyan reference gate sitting just below the row. */
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  border-radius: 16px;
+  box-shadow: none;
+  z-index: 6;
+}
+/* Row gets a fully-opaque white border + soft cyan halo when the kid
+   is actively building. The halo stays cyan so "active" still ties
+   into the gate/water color language — only the frame itself is white. */
+.river-row--active {
+  border-color: #ffffff;
+  box-shadow:
+    0 0 22px rgba(56, 189, 248, 0.45),
+    inset 0 0 14px rgba(56, 189, 248, 0.15);
+}
+
+
+.river-row__hint {
+  opacity: 0.55;
+  font-size: 0.9rem;
+  padding-left: 0.75rem;
+  color: var(--ui-text);
+  font-family: var(--font-display);
+  font-weight: 400;
+}
+
+/* ── Logs (cylinder kawaii) ───────────────────────────────────────
+   Lane guides are optional (SnapGuides); scene plates have no baked dashes.
+   Logs are proportional via --log-unit; halve the unit to scale everything. */
+.log {
+  height: var(--log-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  user-select: none;
+  touch-action: none;
+  box-sizing: border-box;
+  border-radius: 32px / 16px;
+  border: 3px solid var(--log-outline);
+  cursor: grab;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  position: relative;
+  overflow: visible;
+}
+
+.log--whole   { --log-fill: var(--log-whole);   width: var(--log-whole-w)   }
+.log--half    { --log-fill: var(--log-half);    width: var(--log-half-w)    }
+.log--quarter { --log-fill: var(--log-quarter); width: var(--log-quarter-w) }
+
+/* Mount animation — EVERY log gets this on first DOM insertion. Lets the
+   kid see clear visual confirmation that a piece appeared (works for both
+   user chops via splitBlock AND DEMO state transitions). CSS animations
+   only fire once on element mount, so existing logs stay still on
+   subsequent re-renders. */
+.log {
+  animation: log-mount 200ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes log-mount {
+  0%   { transform: scale(0.85); opacity: 0.7; }
+  60%  { transform: scale(1.03); opacity: 1;   }
+  100% { transform: scale(1);    opacity: 1;   }
+}
+
+/* Axe swing overlay removed — visual feedback for chops is carried by
+   the universal log-mount animation (scale-up + opacity fade-in on
+   freshly-mounted halves), plus the existing playChopSound audio. */
+
+.log {
+  background:
+    /* wood grain lines running along the length */
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 14px,
+      rgba(139, 79, 40, 0.18) 14px 15px
+    ),
+    /* bark-edge top highlight */
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.45) 0%,
+      rgba(255, 230, 180, 0.15) 30%,
+      transparent 55%,
+      rgba(100, 50, 20, 0.18) 100%
+    ),
+    var(--log-fill);
+  box-shadow:
+    /* top highlight for cylinder illusion */
+    inset 0 3px 6px rgba(255, 255, 255, 0.55),
+    /* bottom shadow for depth */
+    inset 0 -4px 8px rgba(120, 60, 20, 0.3),
+    /* drop shadow anchoring to river */
+    0 6px 0 rgba(120, 70, 30, 0.5),
+    0 10px 24px rgba(50, 20, 0, 0.45);
+}
+
+.log:active:not([data-locked='true']) {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.5),
+    0 8px 0 rgba(196, 132, 92, 0.4),
+    var(--shadow-lift);
+}
+
+.log[data-locked='true'] {
+  opacity: 0.45;
+  filter: grayscale(0.35) saturate(0.8);
+  cursor: default;
+}
+
+.log__label {
+  color: #6b3f2a;
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-family: var(--font-display);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+}
+
+.log--selected {
+  outline: 3px solid var(--accent-mint);
+  outline-offset: 2px;
+}
+
+.log-return-btn {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #fda4af, #fb7185);
+  border: 2px solid #fff;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 22px;
+  text-align: center;
+  cursor: pointer;
+  padding: 0;
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(251, 113, 133, 0.5);
+}
+
+/* ── Dock tray — same horizontal coordinate system as the river-row ──
+   Both span `--zone-lane-inset` from each edge, so a 1/4 log at 25% of
+   the dock-tray is exactly the same pixel width as a 1/4 log at 25% of
+   the river-row. The kid sees consistent fraction sizes across zones. */
+.dock-tray {
+  position: absolute;
+  bottom: var(--zone-dock-bottom);
+  left: var(--zone-lane-inset);
+  right: var(--zone-lane-inset);
+  z-index: 15;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 0;
+  gap: 0;
+  pointer-events: auto;
+}
+
+/* Dock-tray log wrappers (the dock-tray__item divs) flex-basis based on
+   fraction, mirroring how placed-log wrappers work in the river. */
+.dock-tray__item {
+  flex: 0 0 auto;
+}
+
+.dock-tray__label {
+  display: none;
+}
+
+.dock-tray__item {
+  cursor: grab;
+  flex-shrink: 0;
+  transition: opacity 0.1s, transform 0.15s;
+}
+
+.dock-tray__item--dragging {
+  opacity: 0.35;
+}
+
+/* ── Buttons ── */
+.btn-kawaii {
+  font-family: var(--font-display);
+  font-weight: 400;
+  border: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.btn-kawaii:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.btn-check {
+  padding: 0.75rem 2.5rem;
+  font-size: 1.15rem;
+  background: linear-gradient(180deg, #86efac 0%, #4ade80 100%);
+  color: #14532d;
+  border-radius: 999px;
+  border: 3px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 5px 0 #16a34a, var(--shadow-soft);
+}
+
+.btn-check:disabled {
+  background: #4b5563;
+  color: #9ca3af;
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.55;
+  border-color: transparent;
+}
+
+.btn-continue {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #98f5e1, #4ade80);
+  border: 4px solid rgba(255, 255, 255, 0.55);
+  color: #14532d;
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 5px 0 #059669, var(--shadow-lift);
+}
+
+/* CHECK button — centered just above the dock-tray */
+.btn-check-anchor {
+  position: absolute;
+  bottom: 27%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 18;
+}
+
+.btn-ready {
+  padding: 0.45rem 1.1rem;
+  font-size: 0.85rem;
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--ui-text);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+  font-family: var(--font-display);
+}
+
+.btn-undo {
+  margin-left: auto;
+  padding: 0.45rem 0.95rem;
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ui-text);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+/* Corner-mounted Undo — sits just below the "Bucky's River Gate" title
+   in the top-left. Translucent so it doesn't compete with the scene. */
+.btn-undo--corner {
+  position: absolute;
+  top: calc(var(--top-bar-height) + 12px);
+  left: 1rem;
+  margin: 0;
+  z-index: 35;
+  background: rgba(255, 255, 255, 0.18);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+/* ── Bonus prompt (Challenge-1 equivalence retry) ────────────────────────
+   Two-button affordance shown alongside Bucky's "different way?" beat.
+   Sits just below the speech bubble so it reads as the kid's response
+   options to what Bucky just asked. */
+.bonus-prompt {
+  position: absolute;
+  top: 22%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.75rem;
+  z-index: 31;
+}
+.btn-bonus-accept {
+  background: linear-gradient(180deg, #fde68a 0%, #facc15 100%);
+  color: #7c2d12;
+  border: 3px solid #f59e0b;
+  padding: 0.55rem 1.25rem;
+  font-size: 1rem;
+  border-radius: 999px;
+  box-shadow: 0 4px 0 rgba(180, 83, 9, 0.5), 0 8px 16px rgba(0, 0, 0, 0.25);
+}
+.btn-bonus-accept:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(180, 83, 9, 0.5); }
+
+.btn-bonus-decline {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ui-text-dark, #4a3530);
+  border: 2px solid rgba(255, 179, 217, 0.6);
+  padding: 0.5rem 1.05rem;
+  font-size: 0.9rem;
+  border-radius: 999px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+.btn-bonus-decline:active { transform: translateY(1px); }
+
+.btn-undo--corner:active {
+  transform: scale(0.96);
+}
+
+/* ── Boot screen ── */
+.boot-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100dvh;
+  gap: 1.5rem;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255, 179, 217, 0.35), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 90%, rgba(152, 245, 225, 0.2), transparent),
+    linear-gradient(165deg, #fce7f3 0%, #e9d5ff 35%, #2d1b4e 100%);
+  color: var(--bucky-text);
+  text-align: center;
+  padding: 2rem;
+}
+
+.boot-screen__mascot {
+  filter: drop-shadow(0 8px 24px rgba(255, 143, 171, 0.45));
+  animation: boot-bounce 2s ease-in-out infinite;
+}
+
+@keyframes boot-bounce {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50%      { transform: translateY(-12px) rotate(2deg); }
+}
+
+.boot-screen__title {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  margin: 0;
+  color: #5c3d4a;
+  text-shadow: 0 2px 0 rgba(255, 255, 255, 0.6);
+  line-height: 1.2;
+}
+
+.boot-screen__tagline {
+  font-size: 1.1rem;
+  margin: 0;
+  color: #7c5a6b;
+  font-weight: 600;
+  max-width: 320px;
+}
+
+.boot-screen__start {
+  margin-top: 0.5rem;
+  padding: 1rem 2.75rem;
+  font-size: 1.35rem;
+  background: linear-gradient(180deg, #ff8fab 0%, #fb7185 100%);
+  color: #fff;
+  border-radius: 999px;
+  border: 4px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 6px 0 #e11d48, var(--shadow-lift);
+}
+
+/* ── Goal sidebar — wooden post sign planted next to the dock ──
+   Lives between the right dock-post and the right grass bank, with a
+   slight tilt for character. Reads as part of the river-builder world,
+   not as floating UI chrome. */
+.goal-sidebar {
+  position: absolute;
+  bottom: 7%;
+  right: 6%;
+  width: 11%;
+  min-width: 80px;
+  padding: 0.5rem 0.7rem 0.6rem;
+  background:
+    /* wood grain stripes */
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 10px,
+      rgba(120, 70, 30, 0.12) 10px 11px
+    ),
+    /* warm wood gradient */
+    linear-gradient(180deg, #f3cb96 0%, #c5985c 100%);
+  border: 3px solid #8b5a2b;
+  border-radius: 6px;
+  text-align: center;
+  color: #3e2723;
+  box-shadow:
+    0 4px 0 rgba(110, 60, 20, 0.55),
+    0 8px 18px rgba(0, 0, 0, 0.5);
+  transform: rotate(-3deg);
+  z-index: 18;
+}
+
+/* Tiny rope/nail dots — quick visual texture so it reads as nailed wood */
+.goal-sidebar::before,
+.goal-sidebar::after {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(60, 30, 10, 0.6);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+.goal-sidebar::before { top: 4px; left:  6px; }
+.goal-sidebar::after  { top: 4px; right: 6px; }
+
+.goal-sidebar__heading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  color: #3e2723;
+}
+
+.goal-sidebar__preview {
+  margin: 0.35rem auto;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--ref-gate), var(--accent-lavender));
+  box-shadow: 0 0 10px var(--ref-gate-glow);
+}
+
+.goal-sidebar__label {
+  margin: 0.25rem 0 0;
+  font-weight: 800;
+  color: #0ea5e9;
+  font-size: 1.4rem;
+  font-family: var(--font-display);
+  line-height: 1;
+}
+
+/* ── Win overlay ── */
+.win-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(45, 27, 78, 0.88);
+  gap: 1rem;
+  z-index: 50;
+  backdrop-filter: blur(6px);
+}
+
+.win-overlay__emoji {
+  font-size: 5rem;
+  animation: boot-bounce 1.2s ease-in-out infinite;
+}
+
+.win-overlay__text {
+  font-size: 1.15rem;
+  text-align: center;
+  max-width: 400px;
+  margin: 0;
+  font-weight: 700;
+  font-family: var(--font-display);
+  color: var(--ui-text);
+}
+
+.win-overlay__btn {
+  padding: 0.85rem 2.5rem;
+  font-size: 1.1rem;
+  background: linear-gradient(180deg, #ff8fab, #fb7185);
+  color: #fff;
+  border-radius: 999px;
+  border: 3px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 5px 0 #e11d48;
+}

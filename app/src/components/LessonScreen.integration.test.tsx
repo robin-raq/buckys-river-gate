@@ -30,15 +30,16 @@ beforeAll(() => {
 const noop = () => {}
 
 describe('LessonScreen visual integration', () => {
-  it('renders BuckyAvatar with dialogue buckyState', () => {
+  it('uses kawaii river scene during DEMO', () => {
     render(
       <LessonScreen
         state={makeLessonState({ dialogueNodeId: 'DEMO_CHOP_1', phase: 'DEMO' })}
         dispatch={noop}
       />,
     )
-    const avatar = screen.getByTestId('bucky-avatar')
-    expect(avatar).toHaveAttribute('data-bucky-state', 'chop-swing')
+    expect(screen.getByTestId('speech-bubble')).toBeInTheDocument()
+    expect(screen.queryByTestId('scene-backdrop')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('game-canvas')).not.toBeInTheDocument()
   })
 
   it('renders equivalence badge on INSTRUCT_NAME_EQUIVALENCE', () => {
@@ -51,21 +52,35 @@ describe('LessonScreen visual integration', () => {
     expect(screen.getByTestId('equivalence-badge')).toHaveTextContent('1/2 = 2/4')
   })
 
-  it('renders goal sidebar during INSTRUCT_BUILD', () => {
+  it('does NOT render a standalone goal sidebar (cyan gate communicates the target)', () => {
+    // Design decision: the cyan reference gate's WIDTH already shows the
+    // fraction the kid must fill. A separate "GOAL: 1/2" panel was a 4th
+    // attention magnet competing with the speech bubble, gate, and dock.
+    // The GoalSidebar component was removed entirely from the render tree.
     render(
       <LessonScreen
         state={makeLessonState({ phase: 'INSTRUCT_BUILD', dialogueNodeId: 'INSTRUCT_BUILD_PROMPT' })}
         dispatch={noop}
       />,
     )
-    expect(screen.getByTestId('goal-sidebar')).toBeVisible()
+    expect(screen.queryByTestId('goal-sidebar')).toBeNull()
+    expect(screen.getByTestId('reference-gate')).toBeVisible()
   })
 
-  it('renders river scene backdrop', () => {
+  it('renders scene plate layout with animated Bucky sprite during INSTRUCT', () => {
     render(
-      <LessonScreen state={makeLessonState()} dispatch={noop} />,
+      <LessonScreen
+        state={makeLessonState({ phase: 'INSTRUCT_BUILD', dialogueNodeId: 'INSTRUCT_BUILD_PROMPT' })}
+        dispatch={noop}
+      />,
     )
-    expect(screen.getByTestId('river-scene')).toBeInTheDocument()
+    expect(document.querySelector('.lesson-screen')).toBeInTheDocument()
+    expect(document.querySelector('.river-row')).toBeInTheDocument()
+    expect(screen.getByTestId('speech-bubble')).toBeInTheDocument()
+    // Bucky is now a sprite on top of bucky-background.png (Option A from design mockup)
+    expect(screen.getByTestId('bucky-avatar')).toBeVisible()
+    // Lane dividers show in BUILD phases so the kid sees the snap targets.
+    expect(screen.getByTestId('snap-guides')).toBeVisible()
   })
 
   it('highlights reference gate when dialogue requests highlightGap', () => {

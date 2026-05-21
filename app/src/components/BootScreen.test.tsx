@@ -23,13 +23,13 @@ describe('BootScreen', () => {
 
   it('renders a start button', () => {
     render(<BootScreen onStart={vi.fn()} />)
-    expect(screen.getByRole('button', { name: /start|play|begin/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /start|play|begin|build/i })).toBeInTheDocument()
   })
 
   it('calls onStart when the button is clicked', async () => {
     const onStart = vi.fn()
     render(<BootScreen onStart={onStart} />)
-    await userEvent.click(screen.getByRole('button', { name: /start|play|begin/i }))
+    await userEvent.click(screen.getByRole('button', { name: /start|play|begin|build/i }))
     expect(onStart).toHaveBeenCalledOnce()
   })
 })

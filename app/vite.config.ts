@@ -8,5 +8,10 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test-setup.ts'],
+    // 'forks' pool — the default threaded pool interacts badly with
+    // vite-plugin-svgr's worker init, intermittently leaving jsdom
+    // uninitialised ("document is not defined"). Forks pay a small
+    // startup cost but are stable.
+    pool: 'forks',
   },
 })

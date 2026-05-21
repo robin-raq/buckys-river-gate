@@ -2,22 +2,25 @@ import type { LessonState, BlockState } from './types'
 import { RIVER_WIDTH_PX } from '../constants'
 
 // ── EXPLORE inventory ──────────────────────────────────────────────────────
-// Mirrors the DEMO: student gets one whole log (splittable → halves) and
-// two quarter logs. They can re-discover the same splits Bucky just showed.
+// Just the whole log. EXPLORE_INTRO says "see how many pieces you can
+// make!" — pre-shipping pieces would short-circuit that discovery.
+// The kid earns halves and quarters by chopping; that IS the lesson.
 
 export const EXPLORE_INVENTORY: Omit<BlockState, 'id'>[] = [
-  { numerator: 1, denominator: 1, pixelWidth: RIVER_WIDTH_PX,     zone: 'dock', slot: null, splittable: true,  selected: false, locked: false },
-  { numerator: 1, denominator: 4, pixelWidth: RIVER_WIDTH_PX / 4, zone: 'dock', slot: null, splittable: false, selected: false, locked: false },
-  { numerator: 1, denominator: 4, pixelWidth: RIVER_WIDTH_PX / 4, zone: 'dock', slot: null, splittable: false, selected: false, locked: false },
+  { numerator: 1, denominator: 1, pixelWidth: RIVER_WIDTH_PX, zone: 'dock', slot: null, splittable: true, selected: false, locked: false },
 ]
 
 // ── INSTRUCT inventory ─────────────────────────────────────────────────────
-// One half log + two quarter logs — enough to demonstrate decomposition.
+// Just two 1/4 logs. The INSTRUCT phase's pedagogical job is to make the
+// kid PHYSICALLY CONSTRUCT the equivalence "2 × 1/4 = 1/2" — if we shipped
+// a 1/2 log, kids would take the trivial path and never enact the concept.
+// (Other error paths like wrong_type / too_long are unreachable here as a
+// result; they're still exercised in the CHECK phase where inventories
+// include multiple piece sizes.)
 
 export const INSTRUCT_INVENTORY: Omit<BlockState, 'id'>[] = [
-  { numerator: 1, denominator: 2, pixelWidth: RIVER_WIDTH_PX / 2,   zone: 'dock', slot: null, splittable: true,  selected: false, locked: false },
-  { numerator: 1, denominator: 4, pixelWidth: RIVER_WIDTH_PX / 4,   zone: 'dock', slot: null, splittable: false, selected: false, locked: false },
-  { numerator: 1, denominator: 4, pixelWidth: RIVER_WIDTH_PX / 4,   zone: 'dock', slot: null, splittable: false, selected: false, locked: false },
+  { numerator: 1, denominator: 4, pixelWidth: RIVER_WIDTH_PX / 4, zone: 'dock', slot: null, splittable: false, selected: false, locked: false },
+  { numerator: 1, denominator: 4, pixelWidth: RIVER_WIDTH_PX / 4, zone: 'dock', slot: null, splittable: false, selected: false, locked: false },
 ]
 
 // ── Block factory ──────────────────────────────────────────────────────────
@@ -50,5 +53,7 @@ export function initLessonState(): LessonState {
     errorType:           null,
     chopCount:           0,
     log:                 [],
+    history:             [],
+    bonusOffered:        false,
   }
 }

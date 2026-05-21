@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 301 364" width="301" height="364" role="img" aria-label="Beaver mascot excited">
+  <title>Beaver  excited</title>
+  <style>
+    @media (prefers-reduced-motion: no-preference) {
+      .beaver-root { animation: excited-pulse 0.85s ease-in-out infinite; transform-origin: 150px 300px; }
+      .eye { animation: excited-blink 0.55s ease-in-out infinite; transform-origin: center; }
+    }
+    @keyframes excited-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    @keyframes excited-blink {
+      0%, 88%, 100% { transform: scaleY(1); }
+      94% { transform: scaleY(0.12); }
+    }
+  </style>
+  <g class="beaver-root">
+    <g class="tail">
+      <path fill="#502d16" stroke="#000" stroke-width="4" stroke-linejoin="round" d="M48 248s-95-76 26-98c68-22 42 94 42 94l-15 4z"/>
+    </g>
+    <ellipse cx="150" cy="248" rx="118" ry="108" fill="#784421" stroke="#000" stroke-width="4"/>
+    <g class="head">
+      <path fill="#784421" stroke="#000" stroke-width="4" stroke-linejoin="round" d="M150 88c-38 0-68 30-68 68s30 68 68 68 68-30 68-68-30-68-68-68z"/>
+      <ellipse cx="108" cy="72" rx="22" ry="20" fill="#784421" stroke="#000" stroke-width="4"/>
+      <ellipse cx="192" cy="72" rx="22" ry="20" fill="#784421" stroke="#000" stroke-width="4"/>
+      <ellipse cx="108" cy="72" rx="10" ry="9" fill="#502d16"/>
+      <ellipse cx="192" cy="72" rx="10" ry="9" fill="#502d16"/>
+      <g class="eye">
+        <ellipse cx="122" cy="136" rx="22" ry="24" fill="#fff" stroke="#000" stroke-width="3"/>
+        <ellipse cx="178" cy="136" rx="22" ry="24" fill="#fff" stroke="#000" stroke-width="3"/>
+        <circle cx="128" cy="140" r="10" fill="#000"/>
+        <circle cx="184" cy="140" r="10" fill="#000"/>
+      </g>
+      <g class="buck-teeth">
+        <path fill="#3d2518" stroke="#000" stroke-width="2" d="M122 156 Q150 144 178 156 L175 188 Q150 198 125 188 Z"/>
+        <rect x="133" y="162" width="13" height="24" rx="2.5" fill="#fff" stroke="#000" stroke-width="2.5"/>
+        <rect x="155" y="162" width="13" height="24" rx="2.5" fill="#fff" stroke="#000" stroke-width="2.5"/>
+        <ellipse cx="150" cy="150" rx="13" ry="8" fill="#502d16" stroke="#000" stroke-width="2.5"/>
+      </g>
+    </g>
+    <ellipse cx="118" cy="318" rx="52" ry="38" fill="#784421" stroke="#000" stroke-width="4"/>
+    <ellipse cx="182" cy="318" rx="52" ry="38" fill="#784421" stroke="#000" stroke-width="4"/>
+    <g fill="#502d16" stroke="#000" stroke-width="4">
+      <ellipse cx="108" cy="332" rx="15" ry="10"/>
+      <ellipse cx="128" cy="332" rx="15" ry="10"/>
+      <ellipse cx="172" cy="332" rx="15" ry="10"/>
+      <ellipse cx="192" cy="332" rx="15" ry="10"/>
+    </g>
+  </g>
+</svg>

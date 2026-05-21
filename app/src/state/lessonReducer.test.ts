@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { lessonReducer }  from './lessonReducer'
 import { initLessonState, makeInventory } from './initialState'
 import { CHECK_CHALLENGES } from './checkChallenges'
-import type { LessonState } from './types'
+import type { BlockState, LessonState } from './types'
 import type { LessonEvent } from './lessonEvents'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -21,8 +21,9 @@ function stateAt(phase: LessonState['phase']): LessonState {
   s = dispatch(s, { type: 'START' })
   if (phase === 'DEMO') return s
 
-  // DEMO → EXPLORE (10 DIALOGUE_ADVANCE events, one per demo slide)
-  for (let i = 0; i < 10; i++) s = dispatch(s, { type: 'DIALOGUE_ADVANCE' })
+  // DEMO → EXPLORE (9 DIALOGUE_ADVANCE events, one per demo slide
+  // post-trim — DEMO_REVIEW_WHOLE was cut).
+  for (let i = 0; i < 9; i++) s = dispatch(s, { type: 'DIALOGUE_ADVANCE' })
   if (phase === 'EXPLORE') return s
 
   // EXPLORE → EXPLORE_END
@@ -40,11 +41,14 @@ function stateAt(phase: LessonState['phase']): LessonState {
   throw new Error(`stateAt: unsupported phase shortcut "${phase}". Build it manually.`)
 }
 
-/** Place a half-log (1/2) into the INSTRUCT build zone so CHECK_SUBMIT fires. */
-function withHalfInBuildZone(s: LessonState): LessonState {
-  const halfBlock = s.blocks.find(b => b.numerator === 1 && b.denominator === 2)!
-  let next = dispatch(s, { type: 'LOG_SNAPPED', blockId: halfBlock.id, slot: 0 })
-  return next
+/** Place a single 1/4 into the INSTRUCT build zone — triggers too_short
+ *  (the gate is 1/2, and one 1/4 fills only half of it). Used by error-
+ *  state tests that need to enter INSTRUCT_ERROR before testing the
+ *  post-error behavior. (Previously this used a 1/2 log to trigger
+ *  wrong_type, but the INSTRUCT inventory no longer ships a 1/2.) */
+function withOneQuarterInBuildZone(s: LessonState): LessonState {
+  const quarter = s.blocks.find(b => b.zone === 'dock' && b.denominator === 4)!
+  return dispatch(s, { type: 'LOG_SNAPPED', blockId: quarter.id, slot: 0 })
 }
 
 /** Place two quarter logs into the INSTRUCT build zone so CHECK_SUBMIT is correct. */
@@ -98,6 +102,60 @@ describe('DEMO phase', () => {
     expect(s.dialogueNodeId).toBe('DEMO_INTRO')
   })
 
+  // ── History stack (BACK button support) ──────────────────────────────────
+  // DIALOGUE_ADVANCE pushes a snapshot of the previous state onto history;
+  // DIALOGUE_REWIND pops it and restores. This lets the kid hop back if
+  // they tapped past a chop they wanted to re-watch — full state rewind,
+  // not just dialogue rewind, so the narrative stays coherent.
+  it('history is empty at DEMO start', () => {
+    expect(demo.history).toEqual([])
+  })
+
+  it('DIALOGUE_ADVANCE pushes the previous state onto history', () => {
+    const s = adv(demo)
+    expect(s.history).toHaveLength(1)
+    expect(s.history[0].dialogueNodeId).toBe('DEMO_INTRO')
+  })
+
+  it('DIALOGUE_ADVANCE pushes a snapshot WITHOUT recursive history', () => {
+    // The snapshot must omit the history field itself — otherwise the
+    // state size would explode geometrically across taps.
+    const s = adv(demo, 2)
+    expect(s.history).toHaveLength(2)
+    expect(s.history[0]).not.toHaveProperty('history')
+    expect(s.history[1]).not.toHaveProperty('history')
+  })
+
+  it('DIALOGUE_REWIND restores the previous state and pops history', () => {
+    const before = demo
+    const after  = adv(demo)
+    const rewound = dispatch(after, { type: 'DIALOGUE_REWIND' })
+    expect(rewound.dialogueNodeId).toBe(before.dialogueNodeId)
+    expect(rewound.blocks).toEqual(before.blocks)
+    expect(rewound.history).toHaveLength(0)
+  })
+
+  it('DIALOGUE_REWIND across a chop reverses the chop (state rewind, not just dialogue)', () => {
+    // DEMO_CHOP_1 splits the whole log into halves. After rewinding past
+    // it, the whole log should be back — full state rewind.
+    const beforeChop = adv(demo, 2) // DEMO_INTRO → DEMO_SHOW_WHOLE → DEMO_CHOP_1
+    expect(beforeChop.dialogueNodeId).toBe('DEMO_CHOP_1')
+    const afterChop  = adv(beforeChop)
+    expect(afterChop.dialogueNodeId).toBe('DEMO_SHOW_HALVES')
+    expect(afterChop.blocks.filter(b => b.zone === 'build')).toHaveLength(2)
+
+    const rewound = dispatch(afterChop, { type: 'DIALOGUE_REWIND' })
+    expect(rewound.dialogueNodeId).toBe('DEMO_CHOP_1')
+    const build = rewound.blocks.filter(b => b.zone === 'build')
+    expect(build).toHaveLength(1)
+    expect(build[0].denominator).toBe(1)  // un-chopped whole log
+  })
+
+  it('DIALOGUE_REWIND on empty history is a no-op', () => {
+    const rewound = dispatch(demo, { type: 'DIALOGUE_REWIND' })
+    expect(rewound).toBe(demo)
+  })
+
   // ── Slide 1: DEMO_INTRO → DEMO_SHOW_WHOLE ───────────────────────────────
   it('slide 1: DEMO_INTRO → DEMO_SHOW_WHOLE adds a 1/1 whole log to build zone', () => {
     const s = adv(demo)
@@ -144,6 +202,20 @@ describe('DEMO phase', () => {
     expect(halves).toHaveLength(1)
   })
 
+  // ── Slide 5 (visual order regression): the two new quarters must appear
+  //    in the LEFT positions of the build zone, not at the end. The render
+  //    pipeline uses `blocks.filter(zone==='build')` array order as the
+  //    left-to-right visual order, so when Bucky says "let me chop this
+  //    left half" the LEFT two slots must end up as the 1/4 children and
+  //    the rightmost slot stays the untouched 1/2 right half.
+  it('slide 5 preserves left→right order: quarters on the left, right half on the right', () => {
+    const s = adv(demo, 5)
+    const build = s.blocks.filter(b => b.zone === 'build')
+    expect(build[0].denominator).toBe(4)
+    expect(build[1].denominator).toBe(4)
+    expect(build[2].denominator).toBe(2)
+  })
+
   // ── Slide 6: DEMO_SHOW_FIRST_QUARTERS → DEMO_CHOP_3 ────────────────────
   it('slide 6: DEMO_SHOW_FIRST_QUARTERS → DEMO_CHOP_3 — blocks unchanged', () => {
     const s = adv(demo, 6)
@@ -160,25 +232,30 @@ describe('DEMO phase', () => {
     expect(build.every(b => b.denominator === 4)).toBe(true)
   })
 
-  // ── Slides 8–9: DEMO_EQUATION → DEMO_HANDOFF — dialogue only ─────────────
-  it('slides 8–9: DEMO_EQUATION → DEMO_HANDOFF — no block changes', () => {
+  // ── Slide 8: DEMO_SHOW_ALL_QUARTERS → DEMO_REVIEW_HALF (recap beat A) ────
+  it('slide 8: DEMO_SHOW_ALL_QUARTERS → DEMO_REVIEW_HALF — recap beat A, blocks unchanged', () => {
     const s7 = adv(demo, 7)
-    const blockCount = s7.blocks.length
     const s8 = adv(s7)
-    const s9 = adv(s8)
-    expect(s8.dialogueNodeId).toBe('DEMO_EQUATION')
-    expect(s9.dialogueNodeId).toBe('DEMO_HANDOFF')
-    expect(s9.blocks).toHaveLength(blockCount)
+    expect(s8.dialogueNodeId).toBe('DEMO_REVIEW_HALF')
+    expect(s8.phase).toBe('DEMO')
+    const build = s8.blocks.filter(b => b.zone === 'build')
+    expect(build).toHaveLength(4)
+    expect(build.every(b => b.denominator === 4)).toBe(true)
   })
 
-  // ── Slide 10: DEMO_HANDOFF → EXPLORE ─────────────────────────────────────
-  it('slide 10: DEMO_HANDOFF → EXPLORE with a whole log in the dock', () => {
+  // ── Slide 9: DEMO_REVIEW_HALF → EXPLORE ──────────────────────────────────
+  // DEMO_REVIEW_HALF is now the FINAL DEMO node — its DIALOGUE_ADVANCE
+  // handles the phase transition + dock inventory refresh + exploreStartTime
+  // stamp directly. Earlier there was a second recap (DEMO_REVIEW_WHOLE)
+  // that's been cut.
+  it('slide 9: DEMO_REVIEW_HALF → EXPLORE with a whole log in the dock and exploreStartTime set', () => {
     const s = stateAt('EXPLORE')
     expect(s.phase).toBe('EXPLORE')
     expect(s.dialogueNodeId).toBe('EXPLORE_INTRO')
     const dock = s.blocks.filter(b => b.zone === 'dock')
     expect(dock.some(b => b.denominator === 1)).toBe(true)  // 1/1 whole log present
     expect(s.blocks.filter(b => b.zone === 'build')).toHaveLength(0)
+    expect(s.exploreStartTime).toBeGreaterThan(0)
   })
 })
 
@@ -214,13 +291,52 @@ describe('EXPLORE phase', () => {
     expect(s.blocks.length).toBeGreaterThan(explore.blocks.length)
   })
 
+  it('CHOP on a build-zone block → BOTH halves stay in the build zone', () => {
+    // Regression: previously childB was forced to zone:'dock', so chopping
+    // a whole log in the river left only one half visible. The lesson
+    // requires BOTH halves to appear together so the kid sees 1/1 = 1/2 + 1/2.
+    const original: BlockState = {
+      id:          'whole-1',
+      numerator:   1,
+      denominator: 1,
+      pixelWidth:  960,
+      zone:        'build',
+      slot:        0,
+      splittable:  true,
+      selected:    false,
+      locked:      false,
+    }
+    const seeded: LessonState = {
+      ...explore,
+      blocks:        [original],
+      buildZoneLogs: ['whole-1'],
+    }
+
+    const s = dispatch(seeded, { type: 'CHOP', blockId: 'whole-1' })
+    const inRiver = s.blocks.filter(b => b.zone === 'build')
+    expect(inRiver).toHaveLength(2)
+    expect(inRiver.every(b => b.numerator === 1 && b.denominator === 2)).toBe(true)
+    // buildZoneLogs replaces the parent ID with BOTH children at the same
+    // ordered position — otherwise CHECK validation would undercount.
+    expect(s.buildZoneLogs).toEqual(['whole-1-a', 'whole-1-b'])
+  })
+
   it('CHOP on non-splittable (1/4) block → state unchanged', () => {
-    // New EXPLORE inventory: [1/2 (splittable), 1/4, 1/4 (not splittable)]
-    // Quarters are directly in inventory — no need to chop down to them
-    const quarter = explore.blocks.find(b => b.denominator === 4)!
-    const afterChop = dispatch(explore, { type: 'CHOP', blockId: quarter.id })
-    // Quarter log can't be chopped — block count stays the same
-    expect(afterChop.blocks.length).toBe(explore.blocks.length)
+    // EXPLORE inventory now ships only the whole log — to test the
+    // non-splittable invariant we chop down to a 1/4 first (whole →
+    // halves → quarters), then assert that chopping the quarter is
+    // a no-op. This is closer to how the kid actually reaches a 1/4
+    // in play, so the test doubles as a chain-correctness check.
+    const whole = explore.blocks.find(b => b.denominator === 1)!
+    let s = dispatch(explore, { type: 'CHOP', blockId: whole.id })
+    const half = s.blocks.find(b => b.denominator === 2)!
+    s = dispatch(s, { type: 'CHOP', blockId: half.id })
+    const quarter = s.blocks.find(b => b.denominator === 4)!
+    const sizeBefore = s.blocks.length
+
+    const afterChop = dispatch(s, { type: 'CHOP', blockId: quarter.id })
+
+    expect(afterChop.blocks.length).toBe(sizeBefore)
   })
 
   it('CHOP on splittable block → increments chopCount', () => {
@@ -266,9 +382,10 @@ describe('EXPLORE_END phase', () => {
     const s = dispatch(stateAt('EXPLORE_END'), { type: 'DIALOGUE_ADVANCE' })
     expect(s.phase).toBe('INSTRUCT_INTRO')
     expect(s.dialogueNodeId).toBe('INSTRUCT_GATE_INTRO')
-    // INSTRUCT inventory: [1/2, 1/4, 1/4]
+    // INSTRUCT inventory: [1/4, 1/4] — forces the kid to construct 1/2
+    // via equivalence (no shortcut half-log).
     const denoms = s.blocks.map(b => b.denominator).sort()
-    expect(denoms).toEqual([2, 4, 4])
+    expect(denoms).toEqual([4, 4])
   })
 })
 
@@ -287,6 +404,16 @@ describe('INSTRUCT_INTRO phase', () => {
 describe('INSTRUCT_BUILD phase', () => {
   let build: LessonState
   beforeEach(() => { build = stateAt('INSTRUCT_BUILD') })
+
+  // Inventory pedagogy: INSTRUCT teaches equivalence by FORCING the kid to
+  // build the 1/2 gate with two 1/4 logs. If the inventory still shipped a
+  // 1/2 log, kids would take the trivial path and never *construct* the
+  // equivalence themselves.
+  it('inventory contains exactly two 1/4 logs (forces equivalence construction)', () => {
+    const dock = build.blocks.filter(b => b.zone === 'dock')
+    expect(dock).toHaveLength(2)
+    expect(dock.every(b => b.numerator === 1 && b.denominator === 4)).toBe(true)
+  })
 
   it('LOG_SNAPPED appends to buildZoneLogs', () => {
     const block = build.blocks.find(b => b.zone === 'dock')!
@@ -307,42 +434,17 @@ describe('INSTRUCT_BUILD phase', () => {
     expect(s.dialogueNodeId).toBe('INSTRUCT_CORRECT')
   })
 
-  it('CHECK_SUBMIT wrong_type (1/2 log fills gap but is wrong piece) → INSTRUCT_ERROR', () => {
-    const s = dispatch(withHalfInBuildZone(build), { type: 'CHECK_SUBMIT' })
-    expect(s.phase).toBe('INSTRUCT_ERROR')
-    expect(s.errorType).toBe('wrong_type')
-    expect(s.dialogueNodeId).toBe('INSTRUCT_ERROR_WRONG_TYPE')
-    expect(s.attemptCount).toBe(1)
-  })
+  // wrong_type / too_long error paths are no longer reachable in INSTRUCT
+  // after the inventory was trimmed to just two 1/4 logs (no other piece
+  // sizes available to trigger them). Those error paths still apply to
+  // the CHECK phase where the inventory ships multiple piece types.
 
   it('CHECK_SUBMIT too_short → INSTRUCT_ERROR with errorType too_short', () => {
     // Only one quarter placed — not enough to fill the 1/2 gate
-    const quarter = build.blocks.find(b => b.denominator === 4)!
-    let s = dispatch(build, { type: 'LOG_SNAPPED', blockId: quarter.id, slot: 0 })
-    s = dispatch(s, { type: 'CHECK_SUBMIT' })
+    const s = dispatch(withOneQuarterInBuildZone(build), { type: 'CHECK_SUBMIT' })
     expect(s.phase).toBe('INSTRUCT_ERROR')
     expect(s.errorType).toBe('too_short')
     expect(s.dialogueNodeId).toBe('INSTRUCT_ERROR_SHORT')
-  })
-
-  it('CHECK_SUBMIT too_long (1/2 + 1/4 = 3/4 > 1/2 gate) → INSTRUCT_ERROR with errorType too_long', () => {
-    // INSTRUCT gate = 1/2. Place 1/2 + 1/4 = 3/4, which exceeds the gate.
-    // detectWrongType only fires when total === gate (1/2). Since 3/4 ≠ 1/2,
-    // wrong_type does NOT apply — the reducer returns too_long correctly.
-    const quarters = build.blocks.filter(b => b.denominator === 4)
-    const half = build.blocks.find(b => b.denominator === 2)!
-    let s = dispatch(build, { type: 'LOG_SNAPPED', blockId: half.id, slot: 0 })
-    s = dispatch(s, { type: 'LOG_SNAPPED', blockId: quarters[0].id, slot: 1 })
-    s = dispatch(s, { type: 'CHECK_SUBMIT' })
-    expect(s.phase).toBe('INSTRUCT_ERROR')
-    expect(s.errorType).toBe('too_long')
-  })
-
-  it('CHOP on splittable block stays INSTRUCT_BUILD and splits', () => {
-    const half = build.blocks.find(b => b.denominator === 2 && b.splittable)!
-    const s = dispatch(build, { type: 'CHOP', blockId: half.id })
-    expect(s.phase).toBe('INSTRUCT_BUILD')
-    expect(s.blocks.length).toBeGreaterThan(build.blocks.length)
   })
 })
 
@@ -351,7 +453,7 @@ describe('INSTRUCT_BUILD phase', () => {
 describe('INSTRUCT_ERROR phase', () => {
   it('DIALOGUE_ADVANCE with attemptCount=1 → back to INSTRUCT_BUILD, clears buildZoneLogs', () => {
     let s = stateAt('INSTRUCT_BUILD')
-    s = dispatch(withHalfInBuildZone(s), { type: 'CHECK_SUBMIT' })
+    s = dispatch(withOneQuarterInBuildZone(s), { type: 'CHECK_SUBMIT' })
     expect(s.phase).toBe('INSTRUCT_ERROR')
     expect(s.attemptCount).toBe(1)
 
@@ -365,13 +467,13 @@ describe('INSTRUCT_ERROR phase', () => {
     // Reach INSTRUCT_ERROR at attemptCount=2
     let s = stateAt('INSTRUCT_BUILD')
     // First error
-    s = dispatch(withHalfInBuildZone(s), { type: 'CHECK_SUBMIT' })
+    s = dispatch(withOneQuarterInBuildZone(s), { type: 'CHECK_SUBMIT' })
     expect(s.attemptCount).toBe(1)
     // Return to build
     s = dispatch(s, { type: 'DIALOGUE_ADVANCE' })
     expect(s.phase).toBe('INSTRUCT_BUILD')
     // Second error
-    s = dispatch(withHalfInBuildZone(s), { type: 'CHECK_SUBMIT' })
+    s = dispatch(withOneQuarterInBuildZone(s), { type: 'CHECK_SUBMIT' })
     expect(s.attemptCount).toBe(2)
     // Now attemptCount >= 2 → should reset
     const next = dispatch(s, { type: 'DIALOGUE_ADVANCE' })
@@ -531,6 +633,92 @@ describe('CHECK_ACTIVE phase', () => {
       s = dispatch(s, { type: 'CHECK_SUBMIT' })
       expect(s.phase).toBe('CHECK_ERROR_1')
       expect(s.dialogueNodeId).toBe('CHECK_ERROR_LONG_1_DECOY_C2')
+    })
+
+    // ── Bonus flow (equivalence reinforcement) ────────────────────────────
+    // After the kid solves Challenge 1, Bucky asks "can you fill this
+    // same gap a different way?" If they take the bait and build the
+    // alternate path, they get the pedagogical payoff — they've now
+    // PHYSICALLY enacted equivalence (same gate, two paths).
+    describe('Bonus prompt after correct solve', () => {
+      it('CHECK_CORRECT_C1 → DIALOGUE_ADVANCE → CHECK_BONUS_PROMPT_C1 (still in CHECK_SUCCESS)', () => {
+        let s = snapBlocks(checkActiveAt(1), [4, 4])
+        s = dispatch(s, { type: 'CHECK_SUBMIT' })
+        expect(s.phase).toBe('CHECK_SUCCESS')
+        expect(s.dialogueNodeId).toBe('CHECK_CORRECT_C1')
+
+        const next = dispatch(s, { type: 'DIALOGUE_ADVANCE' })
+        expect(next.phase).toBe('CHECK_SUCCESS')
+        expect(next.dialogueNodeId).toBe('CHECK_BONUS_PROMPT_C1')
+      })
+
+      it('BONUS_DECLINED from prompt → advance to next challenge (CHECK_ACTIVE on C2)', () => {
+        let s = snapBlocks(checkActiveAt(1), [4, 4])
+        s = dispatch(s, { type: 'CHECK_SUBMIT' })
+        s = dispatch(s, { type: 'DIALOGUE_ADVANCE' })  // → CHECK_BONUS_PROMPT_C1
+        expect(s.dialogueNodeId).toBe('CHECK_BONUS_PROMPT_C1')
+
+        const next = dispatch(s, { type: 'BONUS_DECLINED' })
+        expect(next.phase).toBe('CHECK_ACTIVE')
+        expect(next.challengeIndex).toBe(2)
+        expect(next.dialogueNodeId).toBe('CHECK_CHALLENGE_START')
+      })
+
+      it('BONUS_ACCEPTED → CHECK_ACTIVE, build zone cleared, blocks reset to challenge inventory', () => {
+        let s = snapBlocks(checkActiveAt(1), [4, 4])
+        s = dispatch(s, { type: 'CHECK_SUBMIT' })
+        s = dispatch(s, { type: 'DIALOGUE_ADVANCE' })  // → CHECK_BONUS_PROMPT_C1
+
+        const next = dispatch(s, { type: 'BONUS_ACCEPTED' })
+        expect(next.phase).toBe('CHECK_ACTIVE')
+        // Still on challenge 1
+        expect(next.challengeIndex).toBe(1)
+        expect(next.buildZoneLogs).toHaveLength(0)
+        // Inventory restored — all blocks back in dock
+        expect(next.blocks.filter(b => b.zone === 'build')).toHaveLength(0)
+        expect(next.blocks.filter(b => b.zone === 'dock').length).toBeGreaterThan(0)
+        // The bonus-mode flag is set so the next correct submit routes to BONUS_SUCCESS
+        expect(next.bonusOffered).toBe(true)
+      })
+
+      it('After BONUS_ACCEPTED, a correct second solve → CHECK_BONUS_SUCCESS_C1', () => {
+        let s = snapBlocks(checkActiveAt(1), [4, 4])
+        s = dispatch(s, { type: 'CHECK_SUBMIT' })
+        s = dispatch(s, { type: 'DIALOGUE_ADVANCE' })
+        s = dispatch(s, { type: 'BONUS_ACCEPTED' })
+        // Kid solves again — this time with the half-log path
+        s = snapBlocks(s, [2])
+        s = dispatch(s, { type: 'CHECK_SUBMIT' })
+
+        expect(s.phase).toBe('CHECK_SUCCESS')
+        expect(s.dialogueNodeId).toBe('CHECK_BONUS_SUCCESS_C1')
+      })
+
+      it('CHECK_BONUS_SUCCESS_C1 → DIALOGUE_ADVANCE → next challenge, bonusOffered resets', () => {
+        let s = snapBlocks(checkActiveAt(1), [4, 4])
+        s = dispatch(s, { type: 'CHECK_SUBMIT' })
+        s = dispatch(s, { type: 'DIALOGUE_ADVANCE' })
+        s = dispatch(s, { type: 'BONUS_ACCEPTED' })
+        s = snapBlocks(s, [2])
+        s = dispatch(s, { type: 'CHECK_SUBMIT' })
+        expect(s.dialogueNodeId).toBe('CHECK_BONUS_SUCCESS_C1')
+
+        const next = dispatch(s, { type: 'DIALOGUE_ADVANCE' })
+        expect(next.phase).toBe('CHECK_ACTIVE')
+        expect(next.challengeIndex).toBe(2)
+        expect(next.bonusOffered).toBe(false)
+      })
+
+      it('Challenge 0 success does NOT trigger the bonus flow', () => {
+        let s = snapBlocks(checkActiveAt(0), [4])
+        s = dispatch(s, { type: 'CHECK_SUBMIT' })
+        expect(s.dialogueNodeId).toBe('CHECK_CORRECT_C0')
+
+        const next = dispatch(s, { type: 'DIALOGUE_ADVANCE' })
+        // C0 still advances directly to next challenge (no bonus prompt)
+        expect(next.phase).toBe('CHECK_ACTIVE')
+        expect(next.challengeIndex).toBe(1)
+      })
     })
   })
 

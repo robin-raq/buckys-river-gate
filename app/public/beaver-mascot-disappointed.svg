@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 301 364" width="301" height="364" role="img" aria-label="Beaver mascot disappointed">
+  <title>Beaver  disappointed</title>
+  <style>
+    @media (prefers-reduced-motion: no-preference) {
+      .beaver-root { animation: slump 2.5s ease-in-out infinite; transform-origin: 150px 300px; }
+      .tear { animation: tear-drop 2.5s ease-in-out infinite; }
+    }
+    @keyframes slump {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(8px); }
+    }
+    @keyframes tear-drop {
+      0%, 70%, 100% { opacity: 0; transform: translateY(0); }
+      80% { opacity: 0.8; transform: translateY(6px); }
+      95% { opacity: 0; transform: translateY(14px); }
+    }
+  </style>
+  <g class="beaver-root">
+    <g class="tail">
+      <path fill="#502d16" stroke="#000" stroke-width="4" stroke-linejoin="round" d="M48 248s-95-76 26-98c68-22 42 94 42 94l-15 4z"/>
+    </g>
+    <ellipse cx="150" cy="248" rx="118" ry="108" fill="#784421" stroke="#000" stroke-width="4"/>
+    <g class="head">
+      <path fill="#784421" stroke="#000" stroke-width="4" stroke-linejoin="round" d="M150 88c-38 0-68 30-68 68s30 68 68 68 68-30 68-68-30-68-68-68z"/>
+      <ellipse cx="108" cy="72" rx="22" ry="20" fill="#784421" stroke="#000" stroke-width="4"/>
+      <ellipse cx="192" cy="72" rx="22" ry="20" fill="#784421" stroke="#000" stroke-width="4"/>
+      <ellipse cx="108" cy="72" rx="10" ry="9" fill="#502d16"/>
+      <ellipse cx="192" cy="72" rx="10" ry="9" fill="#502d16"/>
+      <path fill="none" stroke="#000" stroke-width="3" d="M108 128 Q122 148 136 128"/>
+      <path fill="none" stroke="#000" stroke-width="3" d="M164 128 Q178 148 192 128"/>
+      <circle cx="126" cy="148" r="8" fill="#000"/>
+      <circle cx="174" cy="148" r="8" fill="#000"/>
+      <g class="buck-teeth">
+        <rect x="136" y="172" width="11" height="16" rx="2" fill="#fff" stroke="#000" stroke-width="2.5"/>
+        <rect x="154" y="172" width="11" height="16" rx="2" fill="#fff" stroke="#000" stroke-width="2.5"/>
+        <path fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" d="M132 168 Q150 176 168 168"/>
+        <ellipse cx="150" cy="162" rx="11" ry="7" fill="#502d16" stroke="#000" stroke-width="2.5"/>
+      </g>
+      <ellipse class="tear" cx="188" cy="152" rx="4" ry="7" fill="#7ec8ff" opacity="0"/>
+    </g>
+    <ellipse cx="118" cy="318" rx="52" ry="38" fill="#784421" stroke="#000" stroke-width="4"/>
+    <ellipse cx="182" cy="318" rx="52" ry="38" fill="#784421" stroke="#000" stroke-width="4"/>
+    <g fill="#502d16" stroke="#000" stroke-width="4">
+      <ellipse cx="108" cy="332" rx="15" ry="10"/>
+      <ellipse cx="128" cy="332" rx="15" ry="10"/>
+      <ellipse cx="172" cy="332" rx="15" ry="10"/>
+      <ellipse cx="192" cy="332" rx="15" ry="10"/>
+    </g>
+  </g>
+</svg>

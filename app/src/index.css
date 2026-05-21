@@ -1,6 +1,6 @@
 @import './styles/tokens.css';
+@import './styles/kawaii-theme.css';
 @import './styles/bucky.css';
-@import './styles/river-scene.css';
 @import './styles/animations.css';
 @import './styles/overlays.css';
 @tailwind base;
@@ -13,56 +13,14 @@ body {
   background: var(--bg-deep);
   color: var(--ui-text);
   margin: 0;
-  font-family: 'Nunito', system-ui, sans-serif;
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
 }
 
-.goal-sidebar {
-  width: 120px;
-  flex-shrink: 0;
-  padding: 0.75rem 0.5rem;
-  font-size: 0.75rem;
-  border-left: 1px solid var(--grid-line);
-}
-
-.goal-sidebar__heading {
-  margin: 0;
-  font-family: 'Fredoka', system-ui, sans-serif;
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  opacity: 0.7;
-}
-
-.goal-sidebar__label {
-  margin: 0;
-  font-weight: 600;
-  color: var(--ref-gate);
-}
-
-/* Prevent iOS callout and text selection on log elements */
 .log, .log * {
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
-}
-
-/* Disable scroll hijack on river canvas */
-.river-canvas { touch-action: none; }
-
-/* Dragged log — position: absolute (never fixed, causes iOS viewport jump) */
-.log--dragging {
-  position: absolute;
-  pointer-events: none;
-  z-index: 50;
-}
-
-.river-row {
-  background: rgba(26, 58, 92, 0.85);
-  border: 1px solid var(--grid-line);
-}
-
-.river-scene {
-  min-height: 280px;
 }
 
 @media (prefers-reduced-motion: reduce) {

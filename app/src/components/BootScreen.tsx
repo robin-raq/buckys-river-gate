@@ -1,4 +1,5 @@
 import { unlockAudio } from '../audio/toneEngine'
+import { BuckyAvatar } from './BuckyAvatar'
 
 interface BootScreenProps {
   onStart: () => void
@@ -6,44 +7,21 @@ interface BootScreenProps {
 
 export function BootScreen({ onStart }: BootScreenProps) {
   function handleStart() {
-    unlockAudio()   // must be inside user-gesture handler for iOS Safari
+    unlockAudio()
     onStart()
   }
+
   return (
-    <div
-      style={{
-        display:         'flex',
-        flexDirection:   'column',
-        alignItems:      'center',
-        justifyContent:  'center',
-        height:          '100dvh',
-        background:      'var(--bg-deep, #0D1B2A)',
-        color:           'var(--ui-text, #E2E8F0)',
-        fontFamily:      'system-ui, sans-serif',
-        gap:             '2rem',
-      }}
-    >
-      <h1 style={{ fontSize: '2.5rem', margin: 0, textAlign: 'center' }}>
-        🪵 Bucky's River Gate
-      </h1>
-      <p style={{ fontSize: '1.1rem', opacity: 0.7, margin: 0 }}>
-        Help Bucky fix the dam!
+    <div className="boot-screen" data-testid="boot-screen">
+      <div className="boot-screen__mascot" aria-hidden>
+        <BuckyAvatar buckyState="excited" size={140} />
+      </div>
+      <h1 className="boot-screen__title">Bucky&apos;s River Gate</h1>
+      <p className="boot-screen__tagline">
+        Tap logs, hear music, and build gates with your new beaver friend!
       </p>
-      <button
-        onClick={handleStart}
-        style={{
-          padding:       '1rem 3rem',
-          fontSize:      '1.4rem',
-          fontWeight:    700,
-          background:    'var(--success-glow, #34D399)',
-          color:         '#0D1B2A',
-          border:        'none',
-          borderRadius:  '1rem',
-          cursor:        'pointer',
-          touchAction:   'manipulation',
-        }}
-      >
-        Start
+      <button type="button" className="boot-screen__start btn-kawaii" onClick={handleStart}>
+        Let&apos;s Build!
       </button>
     </div>
   )

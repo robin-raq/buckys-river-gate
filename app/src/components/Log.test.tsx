@@ -56,10 +56,17 @@ describe('Log', () => {
     expect(el).toHaveAttribute('data-zone', 'build')
   })
 
-  it('has correct pixel width as inline style', () => {
-    render(<Log block={makeBlock({ pixelWidth: 480 })} dispatch={vi.fn()} />)
-    const el = screen.getByTestId('log-test-block-1')
-    expect(el).toHaveStyle({ width: '480px' })
+  it('all logs use width: 100% to fill their proportional wrapper', () => {
+    // The wrapper (in LessonScreen.tsx, for both river-row and dock-tray)
+    // carries the proportional flex-basis = (num/denom)*100%, so a 1/4
+    // log is the same pixel width in both zones (shared lane-band).
+    for (const zone of ['build', 'dock'] as const) {
+      const { unmount } = render(
+        <Log block={makeBlock({ zone })} dispatch={vi.fn()} />,
+      )
+      expect(screen.getByTestId('log-test-block-1')).toHaveStyle({ width: '100%' })
+      unmount()
+    }
   })
 
   it('has data-splittable=true for splittable logs', () => {

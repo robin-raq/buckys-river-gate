@@ -17,6 +17,26 @@ describe('EquivalenceBadge', () => {
     expect(screen.getByTestId('equivalence-badge')).toHaveClass('equivalence-badge-slam')
   })
 
+  it('does NOT apply the flash class by default', () => {
+    render(<EquivalenceBadge visible={true} equation="1/2 = 2/4" />)
+    expect(screen.getByTestId('equivalence-badge')).not.toHaveClass('equivalence-badge--flash')
+  })
+
+  it('applies the flash class when flash=true', () => {
+    render(<EquivalenceBadge visible={true} equation="1/2 + 1/2 = 1" flash />)
+    expect(screen.getByTestId('equivalence-badge')).toHaveClass('equivalence-badge--flash')
+  })
+
+  it('does NOT apply the above class by default', () => {
+    render(<EquivalenceBadge visible={true} equation="1/2 = 2/4" />)
+    expect(screen.getByTestId('equivalence-badge')).not.toHaveClass('equivalence-badge--above')
+  })
+
+  it('applies the above class when above=true', () => {
+    render(<EquivalenceBadge visible={true} equation="1/2 = 2/4" above />)
+    expect(screen.getByTestId('equivalence-badge')).toHaveClass('equivalence-badge--above')
+  })
+
   it('does not render when visible is false', () => {
     render(<EquivalenceBadge visible={false} equation="1/2 = 2/4" />)
     expect(screen.queryByTestId('equivalence-badge')).toBeNull()

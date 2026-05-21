@@ -1,21 +1,36 @@
-/* Reference gate pulse (GDD §2.6) */
+/* Reference gate — kawaii glowing target */
 
 @keyframes gatePulse {
   0%,
   100% {
-    box-shadow: 0 0 12px 4px var(--ref-gate, #3bade8);
+    box-shadow: 0 0 14px 5px var(--ref-gate-glow);
   }
   50% {
-    box-shadow: 0 0 20px 8px var(--ref-gate, #3bade8);
+    box-shadow: 0 0 24px 10px var(--ref-gate-glow);
   }
 }
 
 .reference-gate {
-  border: 3px solid var(--ref-gate, #3bade8);
-  background: rgba(59, 173, 232, 0.15);
-  border-radius: 8px;
+  border: 3px solid var(--ref-gate);
+  background: var(--ref-gate-fill);
+  border-radius: 999px;
   position: relative;
   box-sizing: border-box;
+  min-height: 14px;
+}
+
+.reference-gate__label {
+  position: absolute;
+  top: -1.65rem;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--ref-gate);
+  font-weight: 400;
+  font-family: var(--font-display);
+  white-space: nowrap;
+  text-shadow: 0 1px 4px rgba(255, 255, 255, 0.4);
 }
 
 .reference-gate--pulse {

@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Bucky's River Gate — Final Integration Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --display:'Mochiy Pop One', system-ui, sans-serif;
+  --body:'Nunito', system-ui, sans-serif;
+  /* Log proportions — 1/4 = unit, 1/2 = 2u, 1/1 = 4u */
+  --log-unit:64px;
+  --log-quarter:var(--log-unit);
+  --log-half:calc(var(--log-unit) * 2);
+  --log-whole:calc(var(--log-unit) * 4);
+  --log-height:64px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; padding:20px 24px 60px;
+  background:#0c0518;
+  color:#fdf4ff;
+  font-family:var(--body);
+}
+h1{font-family:var(--display); font-weight:400; margin:0 0 4px; color:#ffd6e8; font-size:22px}
+.lede{opacity:.72; margin:0 0 20px; max-width:980px; font-size:13px; line-height:1.55}
+.variant-title{
+  font-family:var(--display); font-weight:400; margin:24px 0 6px;
+  color:#ffd6e8; font-size:16px
+}
+.variant-meta{opacity:.65; margin:0 0 12px; font-size:12px; max-width:980px; line-height:1.5}
+
+/* ─── Scene canvas (REAL background) ───────────────────── */
+.scene{
+  position:relative;
+  width:100%;
+  max-width:1100px;
+  aspect-ratio:1536/1024;
+  border-radius:18px;
+  overflow:hidden;
+  box-shadow:0 18px 60px rgba(0,0,0,.55);
+  isolation:isolate;
+  background:#7ec8e3 url('/bucky-background.png') center / cover no-repeat;
+}
+
+/* ─── Game UI elements ─────────────────────────────────── */
+
+/* Top bar — wooden plank matching the dock */
+.topbar{
+  position:absolute; top:0; left:0; right:0; height:7%;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 16px;
+  background:
+    linear-gradient(180deg, rgba(184,108,68,.92), rgba(120,68,40,.88)),
+    repeating-linear-gradient(90deg, transparent 0 30px, rgba(0,0,0,.08) 30px 31px);
+  border-bottom:3px solid rgba(255,210,150,.55);
+  font-family:var(--display);
+  z-index:20;
+  box-shadow:0 4px 14px rgba(0,0,0,.35);
+}
+.topbar__title{font-size:14px; color:#fff5e0; text-shadow:0 1px 0 rgba(0,0,0,.5)}
+.topbar__right{display:flex; align-items:center; gap:10px; font-size:11px}
+.chip{
+  background:rgba(255,255,255,.18);
+  border:1.5px solid rgba(255,255,255,.5);
+  border-radius:999px;
+  padding:3px 10px;
+  font-family:var(--display); color:#fff8eb;
+}
+.chip.active{background:rgba(140,255,170,.42); color:#dfffd6; border-color:#a8f5b8}
+.chip.chops{background:rgba(255,200,140,.32); border-color:#ffd29a; color:#fff5e0}
+
+/* Speech bubble — larger, centered-ish in the sky band, tail pointing down-left to Bucky */
+.bubble{
+  position:absolute; top:9%; left:28%;
+  max-width:480px; min-width:280px;
+  background:#fff8eb;
+  color:#3e2723;
+  border:4px solid #8b5a2b;
+  border-radius:22px 22px 22px 8px;
+  padding:16px 20px;
+  font-size:16px;
+  line-height:1.45;
+  font-weight:700;
+  box-shadow:0 10px 30px rgba(0,0,0,.5);
+  z-index:25;
+}
+.bubble::after{
+  content:''; position:absolute; left:6%; bottom:-14px;
+  border:12px solid transparent; border-top-color:#8b5a2b;
+}
+.bubble::before{
+  content:''; position:absolute; left:7%; bottom:-8px;
+  border:10px solid transparent; border-top-color:#fff8eb;
+  z-index:1;
+}
+
+/* Bucky sprite — bigger, framed by the cherry blossom canopy */
+.bucky{
+  position:absolute;
+  bottom:14%; left:4%;
+  width:19%; aspect-ratio:1;
+  z-index:24;
+  filter:drop-shadow(0 8px 18px rgba(0,0,0,.5));
+}
+.bucky-art{
+  width:100%; height:100%;
+  position:relative;
+}
+.bucky-art::before{
+  content:''; position:absolute;
+  width:78%; height:80%;
+  bottom:0; left:11%;
+  background:
+    radial-gradient(circle at 50% 30%, #fcd34d 0 26%, transparent 27%),
+    radial-gradient(circle at 50% 42%, #92400e 0 30%, transparent 31%),
+    radial-gradient(circle at 38% 42%, #fff 0 5%, transparent 6%),
+    radial-gradient(circle at 62% 42%, #fff 0 5%, transparent 6%),
+    radial-gradient(circle at 38% 43%, #000 0 2%, transparent 3%),
+    radial-gradient(circle at 62% 43%, #000 0 2%, transparent 3%),
+    radial-gradient(ellipse 30% 6% at 50% 55%, #5b4423 0 80%, transparent 81%),
+    radial-gradient(ellipse 30% 18% at 50% 78%, #3b82f6 0 80%, transparent 81%),
+    radial-gradient(circle at 50% 90%, #6b3417 0 18%, transparent 19%);
+}
+
+/* Reference gate — cyan glow across river */
+.refgate{
+  position:absolute; top:58%; left:14%; right:14%;
+  height:5px;
+  background:linear-gradient(90deg, transparent 0%, #7dd3fc 6%, #7dd3fc 94%, transparent 100%);
+  box-shadow:0 0 18px #bae6fd, 0 0 6px #7dd3fc;
+  z-index:5;
+  border-radius:4px;
+}
+.refgate__pin{
+  position:absolute; top:-9px; width:7px; height:22px;
+  background:#0ea5e9; border-radius:3px;
+  box-shadow:0 0 10px #7dd3fc;
+}
+.refgate__pin.l{left:0; transform:translateX(-50%)}
+.refgate__pin.r{right:0; transform:translateX(50%)}
+.refgate__label{
+  position:absolute; top:-78px; left:50%; transform:translateX(-50%);
+  background:linear-gradient(180deg, #38bdf8, #0ea5e9);
+  color:white;
+  padding:7px 22px;
+  border-radius:999px;
+  font-family:var(--display); font-size:18px; font-weight:800;
+  white-space:nowrap;
+  letter-spacing:.04em;
+  box-shadow:
+    0 6px 16px rgba(14,165,233,.55),
+    0 0 0 3px rgba(255,255,255,.55),
+    0 0 18px rgba(186,230,253,.5);
+  text-shadow:0 1px 0 rgba(0,0,0,.25);
+}
+
+/* Logs placed in river — sit ON the reference gate line */
+.river-row{
+  position:absolute;
+  top:52%; left:15%; right:15%;
+  height:var(--log-height);
+  display:flex; gap:0;
+  z-index:6;
+}
+.log-placed{
+  height:var(--log-height);
+  border-radius:32px / 16px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 12px, rgba(110,60,20,.22) 12px 13px),
+    linear-gradient(180deg, rgba(255,255,255,.6) 0%, transparent 50%, rgba(0,0,0,.18) 100%),
+    linear-gradient(180deg, #e6b87e 0%, #b8854a 100%);
+  border:2.5px solid #8b5a2b;
+  box-shadow:0 5px 0 rgba(110,60,20,.5), 0 9px 20px rgba(0,0,0,.5);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--display); color:#3e2723; font-size:13px; font-weight:800;
+  text-shadow:0 1px 0 rgba(255,255,255,.55);
+}
+
+/* Dock as the log tray — logs sit at the front of the dock */
+.dock-tray{
+  position:absolute;
+  bottom:5%; left:8%; right:8%;
+  display:flex; gap:8px; justify-content:center; align-items:flex-end;
+  z-index:15;
+  padding:0 4px;
+}
+.log-tray{
+  height:var(--log-height);
+  border-radius:24px / 12px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 12px, rgba(110,60,20,.22) 12px 13px),
+    linear-gradient(180deg, rgba(255,255,255,.6), transparent 50%, rgba(0,0,0,.18)),
+    linear-gradient(180deg, #f3cb96 0%, #c5985c 100%);
+  border:3px solid #8b5a2b;
+  box-shadow:0 5px 0 rgba(110,60,20,.55), 0 8px 18px rgba(0,0,0,.5);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--display); color:#3e2723; font-size:14px; font-weight:800;
+  text-shadow:0 1px 0 rgba(255,255,255,.55);
+  flex-shrink:0;
+}
+.log-tray--whole   { width:var(--log-whole)   }
+.log-tray--half    { width:var(--log-half)    }
+.log-tray--quarter { width:var(--log-quarter) }
+
+/* Goal sidebar — anchored on the right grass bank, below the tree canopy */
+.goal{
+  position:absolute; bottom:18%; right:3%;
+  width:13%;
+  background:rgba(255,248,235,.95);
+  border:3px solid #8b5a2b;
+  border-radius:14px;
+  padding:8px 10px;
+  z-index:18;
+  font-family:var(--display); color:#3e2723; text-align:center;
+  box-shadow:0 6px 16px rgba(0,0,0,.45);
+  font-size:11px;
+}
+.goal__h{font-size:9.5px; opacity:.7; letter-spacing:.08em}
+.goal__big{font-size:24px; margin-top:2px; line-height:1}
+.goal__sub{margin-top:3px; font-size:9.5px; opacity:.7}
+
+/* CHECK button — centered just above the dock-tray */
+.btn-continue{
+  position:absolute; bottom:27%; left:50%; transform:translateX(-50%);
+  padding:0 28px; height:54px; border-radius:999px;
+  background:linear-gradient(180deg, #86efac, #4ade80);
+  color:#14532d; font-size:16px; font-weight:800;
+  display:flex; align-items:center; justify-content:center;
+  border:3px solid rgba(255,255,255,.7);
+  box-shadow:0 5px 0 #16a34a, 0 10px 22px rgba(0,0,0,.5);
+  font-family:var(--display);
+  cursor:pointer;
+  z-index:18;
+  letter-spacing:.05em;
+}
+
+/* Annotations */
+.note{
+  position:absolute;
+  background:rgba(255,212,121,.96);
+  color:#3e2723;
+  border:2px solid #b8854a;
+  border-radius:10px;
+  padding:5px 9px;
+  font-family:var(--display); font-size:10.5px;
+  white-space:nowrap;
+  z-index:40;
+  box-shadow:0 4px 10px rgba(0,0,0,.4);
+}
+.note.muted{background:rgba(173,216,230,.94); border-color:#3b82f6; color:#0f172a}
+
+.row{display:grid; grid-template-columns:1fr; gap:32px; max-width:1100px}
+
+.summary{
+  margin-top:28px; max-width:1100px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:14px; padding:18px 22px;
+}
+.summary h3{font-family:var(--display); color:#ffd6e8; font-size:15px; margin:0 0 8px}
+.summary ul{margin:0; padding-left:18px; line-height:1.65; font-size:13px; opacity:.92}
+.summary code{
+  background:rgba(255,255,255,.1); padding:1px 6px; border-radius:4px;
+  font-size:12px; color:#ffd6e8;
+}
+</style>
+</head>
+<body>
+
+<h1>Bucky's River Gate — Final Integration Mockup</h1>
+<p class="lede">
+This is the actual <code>bucky-background.png</code> with every game UI element overlaid in its final position.
+Yellow sticky notes mark design decisions — they're commentary, not part of the shipped UI.
+The mockup uses CSS placeholders for the Bucky sprite and logs; the real build uses the existing
+<code>BuckyBeaverArt</code> SVG which looks more polished than this CSS stand-in.
+</p>
+
+<div class="row">
+
+  <!-- ─── VARIANT 1: EXPLORE phase ─────────────── -->
+  <div>
+    <div class="variant-title">EXPLORE phase — free play, Bucky introduces the river</div>
+    <p class="variant-meta">No reference gate yet. Bucky waves and invites the kid to drag logs.</p>
+    <div class="scene">
+
+      <div class="topbar">
+        <div class="topbar__title">🪵 Bucky's River Gate</div>
+        <div class="topbar__right">
+          <span class="chip chops">🪓 0</span>
+          <span class="chip active">● Explore</span>
+          <span class="chip">○ Instruct</span>
+          <span class="chip">○ Check</span>
+        </div>
+      </div>
+
+      <div class="bucky"><div class="bucky-art"></div></div>
+
+      <div class="bubble">
+        Hi! I'm Bucky 🦫 Double-tap the log to chop it in half!
+      </div>
+
+      <!-- Whole log already in the river — the kid chops THIS -->
+      <div class="river-row">
+        <div class="log-placed" style="flex:1">1/1</div>
+      </div>
+
+      <!-- Dock starts empty — chopped pieces appear here -->
+      <div class="dock-tray">
+        <span style="font-family:var(--display); font-size:13px; color:rgba(255,255,255,.75); text-shadow:0 2px 0 rgba(0,0,0,.4)">Chopped pieces appear here →</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ─── VARIANT 2: INSTRUCT phase ─────────────── -->
+  <div>
+    <div class="variant-title">INSTRUCT phase — reference gate appears, kid builds 1/2</div>
+    <p class="variant-meta">Cyan glowing reference gate stretches across the dashed-lane grid.
+    Goal sidebar shows the target. Two 1/2 logs in the river (the equivalence reveal).</p>
+    <div class="scene">
+
+      <div class="topbar">
+        <div class="topbar__title">🪵 Bucky's River Gate</div>
+        <div class="topbar__right">
+          <span class="chip chops">🪓 2</span>
+          <span class="chip">○ Explore</span>
+          <span class="chip active">● Instruct</span>
+          <span class="chip">○ Check</span>
+        </div>
+      </div>
+
+      <div class="bucky"><div class="bucky-art"></div></div>
+
+      <div class="bubble">
+        Drag <b>two 1/2 logs</b> into the river to span the gate!
+      </div>
+
+      <div class="refgate">
+        <div class="refgate__pin l"></div>
+        <div class="refgate__pin r"></div>
+      </div>
+
+      <div class="river-row">
+        <div class="log-placed" style="flex:1; margin-right:3px">1/2</div>
+        <div class="log-placed" style="flex:1; margin-left:3px">1/2</div>
+      </div>
+
+      <div class="goal">
+        <div class="goal__h">GOAL</div>
+        <div class="goal__big">1/2</div>
+        <div class="goal__sub">fill the gate</div>
+      </div>
+
+      <button class="btn-continue">CHECK ✓</button>
+
+      <div class="dock-tray">
+        <div class="log-tray log-tray--quarter">1/4</div>
+        <div class="log-tray log-tray--quarter">1/4</div>
+        <div class="log-tray log-tray--quarter">1/4</div>
+        <div class="log-tray log-tray--quarter">1/4</div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<div class="summary">
+  <h3>What changes in the actual rebuild</h3>
+  <ul>
+    <li><b>Delete</b> the current <code>RiverScene.tsx</code>, <code>river-scene.css</code>, the <code>28%</code> padding hack, and the layered <code>scene-bg.png</code>.</li>
+    <li><b>Background</b>: a single CSS rule on <code>.lesson-main</code> — <code>background: url('/bucky-background.png') center / cover no-repeat</code>.</li>
+    <li><b>Lane grid</b>: drop our DOM-rendered <code>SnapGuides</code>. The dashed lines are pixels in the PNG.</li>
+    <li><b>Bucky sprite</b>: <code>position: absolute; bottom: 18%; left: 5%; width: 13%</code>. The existing <code>BuckyBeaverArt</code> already handles state changes.</li>
+    <li><b>Speech bubble</b>: anchored upper-left in the sky band with the tail pointing down-left toward Bucky.</li>
+    <li><b>Reference gate</b>: horizontal cyan-glow bar spanning <code>x: 14% → 86%</code> of the river area.</li>
+    <li><b>Dock-tray</b>: position absolute at <code>bottom: 4%; left: 36%; right: 36%</code> so logs sit on the wooden dock.</li>
+    <li><b>Goal sidebar</b>: small wooden card on the right bank, <code>bottom: 30%; right: 2%</code>.</li>
+    <li><b>Top bar</b>: wooden plank gradient pulling from the dock palette.</li>
+  </ul>
+</div>
+
+</body>
+</html>

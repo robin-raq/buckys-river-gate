@@ -3,18 +3,11 @@ import type { BlockState } from '../state/types'
 import type { LessonEvent } from '../state/lessonEvents'
 import { playChopSound, playBonkSound, playFractionTone } from '../audio/toneEngine'
 
-const DOUBLE_TAP_MS = 300   // two taps within 300 ms = double-tap
+const DOUBLE_TAP_MS = 300
 
 interface LogProps {
   block:    BlockState
   dispatch: Dispatch<LessonEvent>
-}
-
-// Colour by denominator: whole=darkest, quarter=lightest
-const LOG_COLORS: Record<number, string> = {
-  1: 'var(--log-whole,   #8B5E3C)',
-  2: 'var(--log-half,    #A0784F)',
-  4: 'var(--log-quarter, #C49A6C)',
 }
 
 const LOG_SIZE_CLASS: Record<number, string> = {
@@ -28,20 +21,14 @@ function logSizeClass(denominator: number): string {
 }
 
 export function Log({ block, dispatch }: LogProps) {
-  const color       = LOG_COLORS[block.denominator] ?? LOG_COLORS[4]
-  const lastTapRef  = useRef<number>(0)
-
-  // Fraction label: "1/2", "1/4", "1/1"
+  const lastTapRef = useRef<number>(0)
   const fractionLabel = `${block.numerator}/${block.denominator}`
 
-  // Double-tap to chop: only splittable build-zone logs respond.
-  // Locked logs (demo) and dock logs are silent.
   function handleClick() {
     const now = Date.now()
     const gap = now - lastTapRef.current
     lastTapRef.current = now
 
-    // First tap of a potential double-tap — wait for the second
     if (gap > DOUBLE_TAP_MS) return
 
     if (block.locked || block.zone !== 'build') return
@@ -52,51 +39,43 @@ export function Log({ block, dispatch }: LogProps) {
         { numerator: block.numerator, denominator: childDenom },
         { numerator: block.numerator, denominator: childDenom },
       ])
+      // The reducer replaces this parent log with two children. The chop
+      // visual feedback rides on the children's mount-pop animation
+      // (`.log` has a `log-mount` keyframe applied universally).
       dispatch({ type: 'CHOP', blockId: block.id })
     } else {
-      // Quarter logs can't be chopped — bonk feedback
       playBonkSound()
       playFractionTone({ numerator: block.numerator, denominator: block.denominator })
     }
   }
 
+  // Logs always fill 100% of their wrapper. The wrapper (in LessonScreen.tsx,
+  // for both river-row and dock-tray) carries the flex-basis = (num/denom)*100%,
+  // so a 1/4 log is the same pixel width in either zone (since both zones
+  // span the same `--zone-lane-inset` band horizontally). The kid never has
+  // to relearn what "1/4" looks like.
+  const widthStyle = { width: '100%' }
+
+  const className = [
+    'log',
+    logSizeClass(block.denominator),
+    block.selected ? 'log--selected' : '',
+  ].filter(Boolean).join(' ')
+
   return (
     <div
-      className={`log ${logSizeClass(block.denominator)}`}
+      className={className}
       data-testid={`log-${block.id}`}
       data-numerator={block.numerator}
       data-denominator={block.denominator}
       data-zone={block.zone}
       data-splittable={String(block.splittable)}
       data-locked={String(block.locked)}
-      aria-label={`${fractionLabel} log${block.splittable && block.zone === 'build' ? ' — tap to chop' : ''}`}
+      aria-label={`${fractionLabel} log${block.splittable && block.zone === 'build' ? ' — double-tap to chop' : ''}`}
       onClick={handleClick}
-      style={{
-        width:          `${block.pixelWidth}px`,
-        height:         '72px',
-        background:     color,
-        borderRadius:   'var(--log-radius, 12px)',
-        display:        'flex',
-        alignItems:     'center',
-        justifyContent: 'center',
-        cursor:         block.locked ? 'default' : block.splittable && block.zone === 'build' ? 'pointer' : 'grab',
-        userSelect:     'none',
-        touchAction:    'none',
-        border:         block.selected ? '3px solid var(--success-glow, #34D399)' : '3px solid transparent',
-        boxSizing:      'border-box',
-        flexShrink:     0,
-      }}
+      style={widthStyle}
     >
-      <span
-        style={{
-          color:      'var(--bucky-bubble, #FEFCE8)',
-          fontSize:   '1rem',
-          fontWeight: 700,
-          textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-        }}
-      >
-        {fractionLabel}
-      </span>
+      <span className="log__label">{fractionLabel}</span>
     </div>
   )
 }
