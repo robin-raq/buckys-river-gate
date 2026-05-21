@@ -1,0 +1,54 @@
+/* Overlays on top of scene plates (chop-scene-plate.png, etc.) */
+
+.mockup-speech {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  pointer-events: none;
+  padding: 0 8px;
+}
+
+.mockup-speech .speech-bubble {
+  background: #fff8eb !important;
+  border: 3px solid #8b5a2b !important;
+  border-radius: 1.25rem !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25) !important;
+  font-size: 1.15rem !important;
+  line-height: 1.4 !important;
+  color: #3e2723 !important;
+  max-width: 100% !important;
+  width: 100%;
+}
+
+.mockup-river {
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  box-sizing: border-box;
+}
+
+.mockup-river .river-row {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+}
+
+.mockup-dock {
+  z-index: 18;
+  display: flex;
+  align-items: center;
+  padding: 28px 24px 12px;
+  gap: 10px;
+  box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.mockup-dock .log {
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.35));
+}

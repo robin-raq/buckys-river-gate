@@ -5,24 +5,14 @@ interface PhaseDotsProps {
 }
 
 const PHASES: { id: LessonPhase; label: string; testId: string }[] = [
-  { id: 'EXPLORE',  label: 'EXPLORE',  testId: 'phase-dot-explore' },
-  { id: 'INSTRUCT', label: 'INSTRUCT', testId: 'phase-dot-instruct' },
-  { id: 'CHECK',    label: 'CHECK',    testId: 'phase-dot-check' },
+  { id: 'EXPLORE',  label: 'Explore',  testId: 'phase-dot-explore' },
+  { id: 'INSTRUCT', label: 'Instruct', testId: 'phase-dot-instruct' },
+  { id: 'CHECK',    label: 'Check',    testId: 'phase-dot-check' },
 ]
 
 export function PhaseDots({ activePhase }: PhaseDotsProps) {
   return (
-    <div
-      className="phase-dots"
-      style={{
-        display:    'flex',
-        gap:        '0.75rem',
-        alignItems: 'center',
-        fontSize:   '0.75rem',
-        color:      'var(--ui-text, #E2E8F0)',
-      }}
-      aria-label="Lesson phase progress"
-    >
+    <div className="phase-dots" aria-label="Lesson phase progress">
       {PHASES.map(({ id, label, testId }) => {
         const isActive = id === activePhase
         return (
@@ -30,7 +20,9 @@ export function PhaseDots({ activePhase }: PhaseDotsProps) {
             key={id}
             data-testid={testId}
             data-active={isActive ? 'true' : 'false'}
-            style={{ opacity: isActive ? 1 : 0.35 }}
+            className={
+              isActive ? 'phase-dots__item phase-dots__item--active' : 'phase-dots__item'
+            }
           >
             {isActive ? '●' : '○'} {label}
           </span>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 301 364" width="301" height="364" role="img" aria-label="Beaver mascot chopping">
+  <title>Beaver  chopping</title>
+  <style>
+    @media (prefers-reduced-motion: no-preference) {
+      .beaver-root { animation: chop-bob 0.55s ease-in-out infinite; transform-origin: 150px 300px; }
+      .arm-axe { animation: arm-swing 0.45s ease-in-out infinite; transform-origin: 210px 220px; }
+      .axe-head { animation: axe-flash 0.45s ease-in-out infinite; }
+      .chop-spark { animation: spark-pop 0.45s ease-in-out infinite; opacity: 0; }
+    }
+    @keyframes chop-bob {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      40% { transform: translateY(4px) rotate(-2deg); }
+      70% { transform: translateY(-2px) rotate(1deg); }
+    }
+    @keyframes arm-swing {
+      0% { transform: rotate(18deg); }
+      35% { transform: rotate(-42deg); }
+      55% { transform: rotate(-48deg); }
+      100% { transform: rotate(18deg); }
+    }
+    @keyframes axe-flash {
+      0%, 100% { filter: brightness(1); }
+      40% { filter: brightness(1.35); }
+    }
+    @keyframes spark-pop {
+      0%, 30%, 100% { opacity: 0; transform: scale(0.5); }
+      45% { opacity: 1; transform: scale(1.2); }
+      60% { opacity: 0; transform: scale(0.8); }
+    }
+  </style>
+  <g class="beaver-root">
+    <g class="tail">
+      <path fill="#502d16" stroke="#000" stroke-width="4" stroke-linejoin="round" d="M48 248s-95-76 26-98c68-22 42 94 42 94l-15 4z"/>
+    </g>
+    <ellipse cx="150" cy="248" rx="118" ry="108" fill="#784421" stroke="#000" stroke-width="4"/>
+    <g class="head">
+      <path fill="#784421" stroke="#000" stroke-width="4" stroke-linejoin="round" d="M150 88c-38 0-68 30-68 68s30 68 68 68 68-30 68-68-30-68-68-68z"/>
+      <ellipse cx="108" cy="72" rx="22" ry="20" fill="#784421" stroke="#000" stroke-width="4"/>
+      <ellipse cx="192" cy="72" rx="22" ry="20" fill="#784421" stroke="#000" stroke-width="4"/>
+      <ellipse cx="108" cy="72" rx="10" ry="9" fill="#502d16"/>
+      <ellipse cx="192" cy="72" rx="10" ry="9" fill="#502d16"/>
+      <ellipse cx="122" cy="138" rx="20" ry="22" fill="#fff" stroke="#000" stroke-width="3"/>
+      <ellipse cx="178" cy="138" rx="20" ry="22" fill="#fff" stroke="#000" stroke-width="3"/>
+      <circle cx="126" cy="142" r="9" fill="#000"/>
+      <circle cx="182" cy="142" r="9" fill="#000"/>
+      <g class="buck-teeth">
+        <path fill="#3d2518" stroke="#000" stroke-width="2" d="M130 158 Q150 150 170 158 L168 184 Q150 192 132 184 Z"/>
+        <rect x="135" y="162" width="12" height="22" rx="2.5" fill="#fff" stroke="#000" stroke-width="2.5"/>
+        <rect x="154" y="162" width="12" height="22" rx="2.5" fill="#fff" stroke="#000" stroke-width="2.5"/>
+        <ellipse cx="150" cy="154" rx="12" ry="8" fill="#502d16" stroke="#000" stroke-width="2.5"/>
+      </g>
+    </g>
+    <ellipse cx="118" cy="318" rx="52" ry="38" fill="#784421" stroke="#000" stroke-width="4"/>
+    <ellipse cx="182" cy="318" rx="52" ry="38" fill="#784421" stroke="#000" stroke-width="4"/>
+    <g fill="#502d16" stroke="#000" stroke-width="4">
+      <ellipse cx="108" cy="332" rx="15" ry="10"/>
+      <ellipse cx="128" cy="332" rx="15" ry="10"/>
+      <ellipse cx="172" cy="332" rx="15" ry="10"/>
+      <ellipse cx="192" cy="332" rx="15" ry="10"/>
+    </g>
+    <g class="arm-axe">
+      <ellipse cx="218" cy="228" rx="28" ry="34" fill="#784421" stroke="#000" stroke-width="4" transform="rotate(-20 218 228)"/>
+      <circle cx="238" cy="198" r="22" fill="#784421" stroke="#000" stroke-width="4"/>
+      <g transform="translate(248 168) rotate(-12)">
+        <rect x="-3" y="0" width="6" height="52" rx="3" fill="#d4a574" stroke="#000" stroke-width="2"/>
+        <path class="axe-head" fill="#c0c8d4" stroke="#000" stroke-width="2" d="M4 2h28l-4-16H10z"/>
+        <path fill="#8a94a8" d="M10-14h14l2 6H8z"/>
+      </g>
+    </g>
+    <g class="chop-spark" transform="translate(255 155)">
+      <path fill="#ffe566" stroke="#f59e0b" stroke-width="1.5" d="M0-8 2-2 8 0 2 2 0 8-2 2-8 0-2-2z"/>
+      <path fill="#ffb3c6" transform="translate(14 6)" d="M0-5 1.5-1.5 5 0 1.5 1.5 0 5-1.5 1.5-5 0-1.5-1.5z"/>
+    </g>
+  </g>
+</svg>

@@ -36,14 +36,15 @@ describe('BuckyAvatar', () => {
     expect(avatar.className).toContain('extra-class')
   })
 
-  it('renders illustrated beaver SVG instead of emoji', () => {
-    const { container } = render(<BuckyAvatar buckyState="excited" />)
-    expect(screen.getByTestId('bucky-beaver-art')).toBeInTheDocument()
-    expect(container.textContent).not.toMatch(/🦫|😄|🤔/)
+  it('renders the illustrated beaver mascot instead of an emoji', () => {
+    // BuckyBeaverArt uses a single mascot SVG for all dialogue states.
+    // Per-state expressions are conveyed by the CSS class on the wrapper.
+    render(<BuckyAvatar buckyState="chop-swing" />)
+    expect(screen.getByTestId('bucky-beaver-art')).toHaveAttribute('src', '/beaver-mascot.svg')
   })
 
-  it('respects custom size prop', () => {
+  it('respects custom size prop with portrait aspect', () => {
     render(<BuckyAvatar buckyState="idle" size={96} />)
-    expect(screen.getByTestId('bucky-avatar')).toHaveStyle({ width: '96px', height: '96px' })
+    expect(screen.getByTestId('bucky-avatar')).toHaveStyle({ width: '96px', height: '108px' })
   })
 })

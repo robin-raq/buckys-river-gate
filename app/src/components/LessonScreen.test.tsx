@@ -38,7 +38,10 @@ function makeState(overrides: Partial<LessonState> = {}): LessonState {
     exploreStartTime:    0,
     audioUnlocked:       true,
     errorType:           'too_short',
+    chopCount:           0,
     log:                 [],
+    history:             [],
+    bonusOffered:        false,
     ...overrides,
   }
 }

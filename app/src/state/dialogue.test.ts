@@ -139,11 +139,33 @@ describe('node property contracts', () => {
     expect(node.buckyState).toBe('excited')
   })
 
-  it('CHECK_CORRECT_C1 — autoAdvance, leads to CHECK_CHALLENGE_START', () => {
+  it('CHECK_CORRECT_C1 — autoAdvance, leads to the bonus prompt (not directly to next challenge)', () => {
     const node = getNode('CHECK_CORRECT_C1')
     expect(node.autoAdvance).toBe(true)
-    expect(node.nextNode).toBe('CHECK_CHALLENGE_START')
+    // Auto-advance now lands on the bonus prompt where the kid is invited
+    // to try the SAME gate with a different combination of pieces.
+    expect(node.nextNode).toBe('CHECK_BONUS_PROMPT_C1')
     expect(node.buckyState).toBe('celebrating')
+  })
+
+  // Bonus prompt for Challenge 1 — the equivalence-defining moment.
+  // The prompt invites the kid to fill the SAME gap a different way,
+  // turning the lesson from "I solved it" into "I built equivalence."
+  it('CHECK_BONUS_PROMPT_C1 — tap-to-continue is absent (buttons drive it)', () => {
+    const node = getNode('CHECK_BONUS_PROMPT_C1')
+    expect(node.tapToContinue).toBeUndefined()
+    expect(node.autoAdvance).toBeUndefined()
+    expect(node.text).toMatch(/different way/i)
+  })
+
+  it('CHECK_BONUS_SUCCESS_C1 — autoAdvance, names equivalence, leads to next challenge', () => {
+    const node = getNode('CHECK_BONUS_SUCCESS_C1')
+    expect(node.autoAdvance).toBe(true)
+    expect(node.nextNode).toBe('CHECK_CHALLENGE_START')
+    // The bonus-success speech is THE pedagogical payoff for the lesson —
+    // it MUST callback to the formal vocabulary "equivalent" so the kid
+    // hears the word arrive on top of the concept they just performed.
+    expect(node.text).toMatch(/equivalent/i)
   })
 
   it('CHECK_CORRECT_C2 — triggerBadge=true, autoAdvance, leads to WIN_SEQUENCE', () => {
@@ -152,6 +174,126 @@ describe('node property contracts', () => {
     expect(node.autoAdvance).toBe(true)
     expect(node.nextNode).toBe('WIN_SEQUENCE')
     expect(node.buckyState).toBe('celebrating')
+  })
+
+  // ── DEMO recap (two-beat replacement for DEMO_EQUATION + DEMO_HANDOFF) ────
+  // The recap collapses two old "talking head" beats (DEMO_EQUATION with the
+  // pink badge, then DEMO_HANDOFF saying "Now YOU try!" with an empty dock)
+  // into a richer two-beat review. Both beats are tap-to-continue so the
+  // kid sets the pace — the glow/equation visuals need more than the
+  // typewriter duration to land, and auto-timing felt rushed in playtest.
+  it('DEMO_REVIEW_HALF — tapToContinue, build-up equation, no pink highlight frames', () => {
+    const node = getNode('DEMO_REVIEW_HALF')
+    expect(node.tapToContinue).toBe(true)
+    expect(node.equation).toBe('1/4 + 1/4 = 2/4 = 1/2')
+    // Highlight box removed — the side-by-side comparison (real 1/4s
+    // next to faded 1/2) is the proof, no extra frame needed.
+    expect(node.highlightFirstQuarters).toBeUndefined()
+    expect(node.text.length).toBeGreaterThan(0)
+  })
+
+  // The faded 1/2 log moves into the row's empty right half, sitting
+  // side-by-side with the trimmed 1/4 pair on the left. Equation
+  // sits in its default position (below the row).
+  it('DEMO_REVIEW_HALF — referenceLog is a faded 1/2 INLINE-RIGHT of the row', () => {
+    const node = getNode('DEMO_REVIEW_HALF')
+    expect(node.referenceLog).toEqual({
+      fraction: { numerator: 1, denominator: 2 },
+      position: 'inline-right',
+    })
+    expect(node.equationAbove).toBeUndefined()
+  })
+
+  // Trim view: during the recap beat, only the highlighted blocks are
+  // rendered — the un-involved right 1/4s would compete for attention
+  // and dilute the "two quarters = one half" message. Reducer state
+  // still holds all four blocks; this is a render-time filter only.
+  it('DEMO_REVIEW_HALF — trimToHighlight=true (un-involved blocks hidden)', () => {
+    expect(getNode('DEMO_REVIEW_HALF').trimToHighlight).toBe(true)
+  })
+
+  // The equation flashes on this beat too — it IS the lesson statement
+  // tying the highlighted logs and the faded reference together.
+  it('DEMO_REVIEW_HALF — flashEquation=true', () => {
+    expect(getNode('DEMO_REVIEW_HALF').flashEquation).toBe(true)
+  })
+
+
+  it('DEMO_EQUATION and DEMO_HANDOFF are gone — replaced by the two REVIEW beats', () => {
+    expect(() => getNode('DEMO_EQUATION')).toThrowError(/DEMO_EQUATION/)
+    expect(() => getNode('DEMO_HANDOFF')).toThrowError(/DEMO_HANDOFF/)
+  })
+
+  // DEMO_REVIEW_WHOLE was a second recap beat ("1/1 = 4/4") that
+  // restated what DEMO_SHOW_ALL_QUARTERS had already established.
+  // Cut to streamline the DEMO tail — one focused recap is stronger
+  // than two redundant ones.
+  it('DEMO_REVIEW_WHOLE is gone — DEMO_REVIEW_HALF now exits straight to EXPLORE', () => {
+    expect(() => getNode('DEMO_REVIEW_WHOLE')).toThrowError(/DEMO_REVIEW_WHOLE/)
+  })
+
+  // Vocabulary consistency: the phrase "same space" appears verbatim
+  // across three beats — DEMO_REVIEW_HALF (exposure), then
+  // INSTRUCT_NAME_EQUIVALENCE (naming), then CHECK_CORRECT_C1 (test).
+  // The repeated phrase is what makes the formal word "equivalent"
+  // land — the kid hears the same words and recognizes the callback.
+  it('DEMO_REVIEW_HALF speech contains the verbatim phrase "same space"', () => {
+    expect(getNode('DEMO_REVIEW_HALF').text).toMatch(/same space/)
+  })
+  it('INSTRUCT_NAME_EQUIVALENCE speech contains the verbatim phrase "same space"', () => {
+    expect(getNode('INSTRUCT_NAME_EQUIVALENCE').text).toMatch(/same space/)
+  })
+  it('CHECK_CORRECT_C1 speech contains the verbatim phrase "same space"', () => {
+    expect(getNode('CHECK_CORRECT_C1').text).toMatch(/same space/)
+  })
+
+  // The chop line is a vertical red guide on the splittable block in the
+  // river, telegraphing where Bucky's about to chop. It anticipates the
+  // chop visual on the very next beat. Every DEMO_CHOP_* node sets the
+  // flag so the kid sees the cut point before it happens, regardless of
+  // which sub-log is being split.
+  it('DEMO_CHOP_1 — showChopLine=true (telegraphs the center cut on the 1/1)', () => {
+    expect(getNode('DEMO_CHOP_1').showChopLine).toBe(true)
+  })
+  it('DEMO_CHOP_2 — showChopLine=true (telegraphs the cut on the left 1/2)', () => {
+    expect(getNode('DEMO_CHOP_2').showChopLine).toBe(true)
+  })
+  it('DEMO_CHOP_3 — showChopLine=true (telegraphs the cut on the right 1/2)', () => {
+    expect(getNode('DEMO_CHOP_3').showChopLine).toBe(true)
+  })
+
+  // DEMO_SHOW_HALVES is the "two equal halves" beat — after the first chop.
+  // Pairs the visual (two halves in the river) with a flashing equation
+  // that names the result. Earlier draft used a four-segment chain
+  // ("1/2 + 1/2 = 2/2 = 1/1 = whole"); compressed to a single addition
+  // because the intermediate equivalences distracted from the headline.
+  it('DEMO_SHOW_HALVES — equation 1/2 + 1/2 = 1 whole, flashing', () => {
+    const node = getNode('DEMO_SHOW_HALVES')
+    expect(node.equation).toBe('1/2 + 1/2 = 1 whole')
+    expect(node.flashEquation).toBe(true)
+  })
+
+  // DEMO_SHOW_FIRST_QUARTERS is the symmetric beat — after the left half
+  // is chopped. Row layout is [1/4, 1/4, 1/2]; we flash the addition
+  // equation AND glow-box the two new quarters so the kid sees "these
+  // two pieces equal the half that was here." `highlightFirstQuarters`
+  // covers 50% of the row, which at this layout = the left two 1/4s.
+  it('DEMO_SHOW_FIRST_QUARTERS — equation 1/4 + 1/4 = 1/2, flashing, glow on first 2 quarters', () => {
+    const node = getNode('DEMO_SHOW_FIRST_QUARTERS')
+    expect(node.equation).toBe('1/4 + 1/4 = 1/2')
+    expect(node.flashEquation).toBe(true)
+    expect(node.highlightFirstQuarters).toBe(true)
+  })
+
+  // DEMO_SHOW_ALL_QUARTERS closes the DEMO chop loop — all 4 quarters
+  // are in the river. The flashing equation spells out the full
+  // addition (1/4 + 1/4 + 1/4 + 1/4 = 1 whole) and the full-width
+  // pink box wraps all four quarters as "these four equal one whole."
+  it('DEMO_SHOW_ALL_QUARTERS — equation 1/4 + 1/4 + 1/4 + 1/4 = 1 whole, flashing, glow on all 4', () => {
+    const node = getNode('DEMO_SHOW_ALL_QUARTERS')
+    expect(node.equation).toBe('1/4 + 1/4 + 1/4 + 1/4 = 1 whole')
+    expect(node.flashEquation).toBe(true)
+    expect(node.highlightAllQuarters).toBe(true)
   })
 
   it('CHECK_ERROR_SHORT_1_EMPTY — highlightGap=true, loops back to challenge', () => {

@@ -1,4 +1,5 @@
 import type { FractionValue } from '../state/types'
+
 interface GoalSidebarProps {
   visible:    boolean
   gateLabel:  string
@@ -17,18 +18,11 @@ export function GoalSidebar({ visible, gateLabel, gate }: GoalSidebarProps) {
       style={{ visibility: visible ? 'visible' : 'hidden' }}
       className="goal-sidebar"
     >
-      <h2 className="goal-sidebar__heading">GOAL</h2>
+      <h2 className="goal-sidebar__heading">Goal</h2>
       <div
         className="goal-sidebar__preview"
         data-testid="goal-sidebar-preview"
-        style={{
-          width:        `${barWidth}px`,
-          maxWidth:     `${GOAL_PREVIEW_MAX_PX}px`,
-          height:       '8px',
-          background:   'var(--ref-gate, #3BADE8)',
-          borderRadius: '4px',
-          margin:       '0.5rem 0',
-        }}
+        style={{ width: `${barWidth}px`, maxWidth: `${GOAL_PREVIEW_MAX_PX}px` }}
         aria-hidden="true"
       />
       <p className="goal-sidebar__label">{gateLabel}</p>

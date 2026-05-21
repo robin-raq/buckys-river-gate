@@ -42,25 +42,10 @@ export function ReferenceGate({
       aria-label={`Reference gate: ${label}`}
       style={{
         width:      `${widthPx}px`,
-        height:     '8px',
         visibility: visible ? 'visible' : 'hidden',
       }}
     >
-      <span
-        style={{
-          position:   'absolute',
-          top:        '-1.5rem',
-          left:       0,
-          right:      0,
-          textAlign:  'center',
-          fontSize:   '0.75rem',
-          color:      'var(--ref-gate, #3BADE8)',
-          fontWeight: 600,
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {label}
-      </span>
+      <span className="reference-gate__label">{label}</span>
     </div>
   )
 }

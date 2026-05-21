@@ -9,7 +9,6 @@ import { BuckyAvatar }          from './BuckyAvatar'
 import { PhaseDots }            from './PhaseDots'
 import { SpeechBubble }         from './SpeechBubble'
 import { ReferenceGate }        from './ReferenceGate'
-import { RiverScene }           from './RiverScene'
 import { SnapGuides }           from './SnapGuides'
 import { GoalSidebar }          from './GoalSidebar'
 import { CheckButton }          from './CheckButton'
@@ -17,6 +16,12 @@ import { ChallengeCounter }     from './ChallengeCounter'
 import { Log }                  from './Log'
 import { GhostOverlay }         from './overlays/GhostOverlay'
 import { EquivalenceBadge }     from './overlays/EquivalenceBadge'
+import { QuartersHighlight }    from './overlays/QuartersHighlight'
+import type { QuartersHighlightKind } from './overlays/QuartersHighlight'
+import { ChopLine }              from './overlays/ChopLine'
+import { ReferenceLog }          from './overlays/ReferenceLog'
+import { BackButton }            from './BackButton'
+import { BonusPrompt }           from './BonusPrompt'
 import { RIVER_WIDTH_PX }       from '../constants'
 import {
   playSnapSound,
@@ -54,7 +59,6 @@ const GOAL_SIDEBAR_PHASES = new Set([
   'CHECK_INTRO', 'CHECK_ACTIVE', 'CHECK_ERROR_1', 'CHECK_ERROR_2', 'CHECK_SUCCESS',
 ])
 
-const EQUATION_NODES = new Set(['DEMO_EQUATION', 'INSTRUCT_NAME_EQUIVALENCE'])
 
 export function LessonScreen({ state, dispatch }: Props) {
   const node          = getNode(state.dialogueNodeId)
@@ -65,17 +69,76 @@ export function LessonScreen({ state, dispatch }: Props) {
   const isCheckPhase  = CHECK_PHASES.has(state.phase)
   const isBuildActive = BUILD_PHASES.has(state.phase)
   const isExplore     = state.phase === 'EXPLORE'
+  // The kid can actually drag logs from the dock only in build-active
+  // and explore phases. Dialogue-only phases (INSTRUCT_INTRO,
+  // CHECK_INTRO, *_SUCCESS) leave LOG_SNAPPED unhandled in the
+  // reducer — showing the dock + drag hint there would advertise an
+  // interaction that silently does nothing.
+  const dragEnabled   = isBuildActive || isExplore
+
   const gateVisible   = GATE_VISIBLE_PHASES.has(state.phase)
   const goalVisible   = GOAL_SIDEBAR_PHASES.has(state.phase)
   const canSubmit     = state.buildZoneLogs.length > 0
   const lessonPhase   = phaseToLessonPhase(state.phase)
-
   const { numerator: gn, denominator: gd } = state.referenceGate
   const gateLabel = `← ${gn}/${gd} →`
 
-  const showEquationBadge =
-    effects.triggerBadge || EQUATION_NODES.has(state.dialogueNodeId)
-  const equationText = showEquationBadge ? '1/2 = 2/4' : undefined
+  // The pink "1/2 = 2/4" / "1/1 = 4/4" badge is driven entirely by the
+  // dialogue node — `effects.equation` is the source of truth. Each beat
+  // that needs a badge declares its equation in dialogue.ts.
+  const equationText = effects.equation
+  const showEquationBadge = !!equationText
+
+  // QuartersHighlight kind for the recap. Two flags on the node map to
+  // 'first-half' (LEFT two quarters) or 'all' (full row). null → no glow.
+  const quartersHighlightKind: QuartersHighlightKind =
+    effects.highlightFirstQuarters ? 'first-half'
+    : effects.highlightAllQuarters ? 'all'
+    : null
+
+  // Chop-line position. We find the splittable block in the river and
+  // compute its center as a % of the row width (sum of preceding-sibling
+  // widths + half this block's width). This generalises to any chop —
+  // 1/1 → 50%, left 1/2 → 25%, right 1/2 → 75%.
+  const chopLinePositionPct: number | null = (() => {
+    if (!effects.showChopLine) return null
+    const target = buildBlocks.find(b => b.splittable)
+    if (!target) return null
+    let acc = 0
+    for (const b of buildBlocks) {
+      const w = (b.numerator / b.denominator) * 100
+      if (b.id === target.id) return acc + w / 2
+      acc += w
+    }
+    return null
+  })()
+
+  // Trim view — during recap beats, hide un-highlighted blocks so the
+  // kid's eye lands only on the lesson's actual focus. Reducer state
+  // still holds every block; this is purely render-time.
+  //
+  // Trim target derives from whichever context exists:
+  //   - highlightAllQuarters → trim to 100% (effectively no-op)
+  //   - highlightFirstQuarters → trim to 50%
+  //   - referenceLog inline-right → trim to (100% - reference%) so the
+  //     reference fills the remaining row width side-by-side.
+  const visibleBuildBlocks = (() => {
+    if (!effects.trimToHighlight) return buildBlocks
+    let targetPct: number | null = null
+    if (effects.highlightAllQuarters) targetPct = 100
+    else if (effects.highlightFirstQuarters) targetPct = 50
+    else if (effects.referenceLog?.position === 'inline-right') {
+      const { numerator, denominator } = effects.referenceLog.fraction
+      targetPct = 100 - (numerator / denominator) * 100
+    }
+    if (targetPct === null) return buildBlocks
+    let acc = 0
+    return buildBlocks.filter(b => {
+      if (acc >= targetPct!) return false
+      acc += (b.numerator / b.denominator) * 100
+      return true
+    })
+  })()
 
   // ── Drag state ───────────────────────────────────────────────────────────
   // Tracks the log being dragged from the tray. `moved` flips true once the
@@ -142,10 +205,16 @@ export function LessonScreen({ state, dispatch }: Props) {
   function handlePointerUp(e: React.PointerEvent) {
     if (!dragging || !draggedBlock) { setDragging(null); return }
 
+    // Expanded drop zone: any X within the river-row's horizontal span, and
+    // any Y from the top of the scene down to the bottom of the river-row
+    // (i.e. NOT on the dock). This makes the kid's drag feel forgiving —
+    // they don't have to land in a 64px sliver. Dropping anywhere "above
+    // the dock" counts as "into the river."
     const riverRect = riverRowRef.current?.getBoundingClientRect()
-    const overRiver = riverRect &&
-      e.clientX >= riverRect.left && e.clientX <= riverRect.right &&
-      e.clientY >= riverRect.top  && e.clientY <= riverRect.bottom
+    const overRiver = !!riverRect &&
+      e.clientX >= riverRect.left &&
+      e.clientX <= riverRect.right &&
+      e.clientY <= riverRect.bottom
 
     // Place if dropped on river OR tapped without dragging
     if (overRiver || !dragging.moved) {
@@ -161,62 +230,32 @@ export function LessonScreen({ state, dispatch }: Props) {
   // ── Dialogue advance ─────────────────────────────────────────────────────
   function advance() { dispatch({ type: 'DIALOGUE_ADVANCE' }) }
 
-  // ── Canvas viewport scaling ──────────────────────────────────────────────
-  // The river is designed at RIVER_WIDTH_PX (960). We scale it down if the
-  // viewport is narrower so nothing ever clips or scrolls horizontally.
-  const canvasRef  = useRef<HTMLDivElement>(null)
-  const scaleRef   = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function applyScale() {
-      const outer = canvasRef.current
-      const inner = scaleRef.current
-      if (!outer || !inner) return
-      const available = outer.clientWidth
-      const scale     = Math.min(1, available / RIVER_WIDTH_PX)
-      inner.style.transform       = `scale(${scale})`
-      inner.style.transformOrigin = 'top center'
-      outer.style.height          = `${inner.offsetHeight * scale}px`
-    }
-    applyScale()
-    window.addEventListener('resize', applyScale)
-    return () => window.removeEventListener('resize', applyScale)
-  }, [])
+  // ── Scene plate layout ───────────────────────────────────────────────────
+  // The scene (bucky-background.png) is set on .lesson-screen via CSS.
+  // All game UI uses percentage-anchored absolute positioning, so the
+  // whole layout scales fluidly with the viewport — no JS scaling needed.
 
   return (
     <div
+      className="lesson-screen"
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
-      style={{
-        display:       'flex',
-        flexDirection: 'column',
-        height:        '100dvh',
-        background:    'var(--bg-deep)',
-        color:         'var(--ui-text)',
-        fontFamily:    "'Fredoka', 'Nunito', system-ui, sans-serif",
-        overflow:      'hidden',
-        touchAction:   'none',
-      }}>
+    >
 
       {/* ── Top bar ───────────────────────────────────────────────────────── */}
       <TopBar
+        leading={
+          <BackButton
+            canGoBack={state.history.length > 0}
+            onPress={() => dispatch({ type: 'DIALOGUE_REWIND' })}
+          />
+        }
         trailing={
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
             {state.chopCount > 0 && state.phase !== 'WIN' && (
               <span
+                className="chops-counter"
                 data-testid="chops-counter"
-                style={{
-                  display:        'flex',
-                  alignItems:     'center',
-                  gap:            '0.3rem',
-                  fontSize:       '0.85rem',
-                  fontWeight:     700,
-                  color:          'var(--log-half, #A0784F)',
-                  background:     'rgba(160,120,79,0.12)',
-                  borderRadius:   '1rem',
-                  padding:        '0.2rem 0.6rem',
-                  border:         '1px solid rgba(160,120,79,0.3)',
-                }}
                 aria-label={`${state.chopCount} chop${state.chopCount !== 1 ? 's' : ''}`}
               >
                 🪓 {state.chopCount}
@@ -230,41 +269,31 @@ export function LessonScreen({ state, dispatch }: Props) {
         }
       />
 
-      {/* ── Game canvas — all game UI layered here ─────────────────────── */}
-      <div
-        ref={canvasRef}
-        style={{
-          flex:       1,
-          position:   'relative',
-          overflow:   'hidden',
-          display:    'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        {/* Scene backdrop (sky, water, trees) */}
-        <RiverScene />
 
-        {/* Scaled river content — centred horizontally */}
-        <div
-          ref={scaleRef}
-          style={{
-            width:         `${RIVER_WIDTH_PX}px`,
-            display:       'flex',
-            flexDirection: 'column',
-            alignItems:    'flex-start',
-            gap:           '0.5rem',
-            position:      'relative',
-            zIndex:        10,
-            padding:       '0 0 0.5rem',
-          }}
-        >
-          {/* Reference gate */}
+      <div className="lesson-main">
+        {/* bucky-background.png is the scene plate (applied on .lesson-screen).
+            All children below are percentage-anchored overlays on top of it. */}
+
+        <div className="lesson-stage">
+          {/* Lane dividers — rendered in React so they share the river-row
+              coordinate system. Hidden during pure-dialogue moments. */}
+          <SnapGuides visible={isBuildActive || isDemo} />
+
+          {/* Whole-log reference removed — the river-row's own outline (below)
+              now serves as the "1 whole" frame. Avoids two competing outlines. */}
+
           {gateVisible && (
-            <div style={{ paddingTop: '0.25rem' }}>
+            <div
+              className="lesson-gate-anchor"
+              style={{
+                // Gate width as % of lane band — matches placed-log sizing
+                ['--gate-width-pct' as never]:
+                  `${(state.referenceGate.numerator / state.referenceGate.denominator) * 100}%`,
+              }}
+            >
               <ReferenceGate
                 gate={state.referenceGate}
-                visible={true}
+                visible
                 label={gateLabel}
                 highlightGap={effects.highlightGap}
                 highlightOverflow={effects.highlightOverflow}
@@ -272,93 +301,76 @@ export function LessonScreen({ state, dispatch }: Props) {
             </div>
           )}
 
-          {/* River row */}
+          {/* Lane numbers + GOAL label removed — the dashed lane dividers
+              inside the row outline already communicate "4 equal slots"
+              spatially, and the cyan gate above the row already says
+              "this is your target." Extra labels were chrome, not signal. */}
+
           <div
             ref={riverRowRef}
-            className="river-row"
-            style={{
-              position:     'relative',
-              width:        `${RIVER_WIDTH_PX}px`,
-              height:       '112px',
-              background:   'var(--river-water, #1a3a5c)',
-              borderRadius: '12px',
-              border:       '2px solid rgba(59,173,232,0.25)',
-              display:      'flex',
-              alignItems:   'center',
-              padding:      '6px',
-              gap:          '6px',
-              boxShadow:    'inset 0 2px 12px rgba(0,0,0,0.4)',
-            }}
+            className={'river-row' + (isBuildActive ? ' river-row--active' : '')}
           >
-            {/* Grid guides — always visible during DEMO and build phases */}
-            <SnapGuides visible={isDemo || isBuildActive} />
-
-            {buildBlocks.length === 0 && !isDemo && (
-              <span style={{ opacity: 0.35, fontSize: '0.9rem', paddingLeft: '0.75rem', color: 'var(--ref-gate)' }}>
+            {buildBlocks.length === 0 && dragEnabled && (
+              <span className="river-row__hint">
                 {isExplore ? 'Drag a log here →' : 'Drag logs to fill the gap →'}
               </span>
             )}
 
-            {buildBlocks.map(b => (
-              <div key={b.id} style={{ position: 'relative', flexShrink: 0 }}>
-                <Log block={b} dispatch={dispatch} />
-                {!isDemo && (
-                  <button
-                    onClick={() => dispatch({ type: 'LOG_RETURNED', blockId: b.id })}
-                    style={{
-                      position:     'absolute',
-                      top:          '-8px',
-                      right:        '-8px',
-                      width:        '22px',
-                      height:       '22px',
-                      borderRadius: '50%',
-                      background:   'var(--error-glow, #F87171)',
-                      border:       'none',
-                      color:        '#fff',
-                      fontSize:     '14px',
-                      fontWeight:   700,
-                      lineHeight:   '22px',
-                      textAlign:    'center',
-                      cursor:       'pointer',
-                      padding:      0,
-                      zIndex:       1,
-                    }}
-                    title="Return to tray"
-                  >×</button>
-                )}
-              </div>
-            ))}
+            {visibleBuildBlocks.map(b => {
+              // Wrapper flex-basis is the fraction's share of the river-row,
+              // so the placed logs always fit and proportions stay honest.
+              const widthPct = (b.numerator / b.denominator) * 100
+              return (
+                <div
+                  key={b.id}
+                  style={{
+                    position: 'relative',
+                    flex: `0 0 ${widthPct}%`,
+                  }}
+                >
+                  <Log block={b} dispatch={dispatch} />
+                  {!isDemo && (
+                    <button
+                      type="button"
+                      className="log-return-btn"
+                      onClick={() => dispatch({ type: 'LOG_RETURNED', blockId: b.id })}
+                      title="Return to tray"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              )
+            })}
 
             <GhostOverlay
               visible={effects.showGhostOverlay}
               gate={state.referenceGate}
               riverWidthPx={RIVER_WIDTH_PX}
             />
+
+            {/* DEMO recap glow — anchored inside the river-row so the
+                rectangle's coordinates inherit from the row. The CSS
+                width transition (50% → 100%) makes the swap from
+                Beat A to Beat B read as the highlight "widening." */}
+            <QuartersHighlight kind={quartersHighlightKind} />
+
+            {/* DEMO chop telegraph — vertical red line at the center
+                of the splittable block, anticipating the chop. */}
+            <ChopLine positionPct={chopLinePositionPct} />
+
+            {/* Faded reference log floating above OR below the row
+                (e.g. a 1/2 silhouette next to two highlighted 1/4s) —
+                visual proof of "same size" equivalence. Position is
+                authored per node. */}
+            <ReferenceLog
+              fraction={effects.referenceLog?.fraction ?? null}
+              position={effects.referenceLog?.position}
+            />
           </div>
 
-          {/* Column numbers — 1  2  3  4 below the river */}
-          <div style={{ display: 'flex', width: `${RIVER_WIDTH_PX}px` }}>
-            {[1, 2, 3, 4].map(n => (
-              <div
-                key={n}
-                style={{
-                  width:      `${RIVER_WIDTH_PX / 4}px`,
-                  textAlign:  'center',
-                  fontSize:   '0.85rem',
-                  fontWeight: 600,
-                  opacity:    0.45,
-                  color:      'var(--ref-gate, #3BADE8)',
-                  userSelect: 'none',
-                }}
-              >
-                {n}
-              </div>
-            ))}
-          </div>
-
-          {/* Check button — below river in build phases */}
           {isBuildActive && (
-            <div style={{ paddingTop: '0.25rem', zIndex: 2, position: 'relative' }}>
+            <div className="btn-check-anchor">
               <CheckButton
                 label="CHECK"
                 disabled={!canSubmit}
@@ -368,228 +380,169 @@ export function LessonScreen({ state, dispatch }: Props) {
           )}
         </div>
 
-        {/* ── Overlaid UI — absolute-positioned on the game canvas ────── */}
-
-        {/* GOAL card — top left */}
-        <GoalSidebar
-          visible={goalVisible}
-          gateLabel={gateLabel}
-          gate={state.referenceGate}
+        {/* Goal sidebar removed: the cyan reference gate already shows the
+            target spatially (its width = the fraction the kid must fill).
+            Adding a text label was a 4th attention magnet competing with
+            speech bubble, gate, and dock. Less is more. */}
+        <GoalSidebar visible={false} gateLabel={gateLabel} gate={state.referenceGate} />
+        {/* key={equationText} forces a remount when the equation switches
+            from "1/2 = 2/4" to "1/1 = 4/4" so the slam-in animation fires
+            on each new equation — CSS animations don't re-trigger on
+            prop changes, only on element creation. */}
+        <EquivalenceBadge
+          key={equationText ?? 'none'}
+          visible={showEquationBadge}
+          equation={equationText}
+          flash={effects.flashEquation}
+          above={effects.equationAbove}
         />
 
-        {/* FRACTION FACT card — left side during equation moments */}
-        <EquivalenceBadge visible={showEquationBadge} equation={equationText} />
-
-        {/* Speech bubble — top center, floating above river */}
-        <div style={{
-          position:        'absolute',
-          top:             '0.75rem',
-          left:            '50%',
-          transform:       'translateX(-50%)',
-          maxWidth:        '55%',
-          minWidth:        '320px',
-          zIndex:          30,
-          filter:          'drop-shadow(0 4px 16px rgba(0,0,0,0.5))',
-        }}>
+        <div className="lesson-speech-anchor">
           <SpeechBubble
             text={node.text}
             onComplete={node.autoAdvance ? advance : undefined}
           />
         </div>
 
-        {/* Bucky — bottom left, large */}
-        <div style={{
-          position:   'absolute',
-          bottom:     0,
-          left:       '1.5rem',
-          zIndex:     25,
-          userSelect: 'none',
-          filter:     'drop-shadow(0 4px 16px rgba(0,0,0,0.6))',
-        }}>
-          <BuckyAvatar buckyState={node.buckyState} size={180} />
+        {/* Bucky sprite — animated states per dialogue. Doubles as the
+            "tap to continue" affordance.
+            Fires on POINTERDOWN (not click) so the kid feels instant
+            response — click events wait for pointerup which adds ~50ms
+            on touch devices. */}
+        <div
+          className={
+            'lesson-bucky-anchor'
+            + (node.tapToContinue ? ' lesson-bucky-anchor--waiting' : '')
+          }
+          role={node.tapToContinue ? 'button' : undefined}
+          tabIndex={node.tapToContinue ? 0 : undefined}
+          aria-label={node.tapToContinue ? 'Tap Bucky to continue' : undefined}
+          onPointerDown={
+            node.tapToContinue
+              ? (e) => { e.preventDefault(); advance() }
+              : undefined
+          }
+          onKeyDown={
+            node.tapToContinue
+              ? (e) => { if (e.key === 'Enter' || e.key === ' ') advance() }
+              : undefined
+          }
+        >
+          <BuckyAvatar buckyState={node.buckyState} size={200} />
         </div>
 
-        {/* Next button — large green circle, right side */}
-        {node.tapToContinue && (
-          <button
-            onClick={advance}
-            aria-label="Continue"
-            style={{
-              position:     'absolute',
-              right:        '1.5rem',
-              bottom:       '30%',
-              width:        '72px',
-              height:       '72px',
-              borderRadius: '50%',
-              background:   'linear-gradient(135deg, #22c55e, #16a34a)',
-              border:       '3px solid rgba(255,255,255,0.3)',
-              color:        '#fff',
-              fontSize:     '2rem',
-              display:      'flex',
-              alignItems:   'center',
-              justifyContent: 'center',
-              cursor:       'pointer',
-              zIndex:       30,
-              boxShadow:    '0 4px 20px rgba(34,197,94,0.5)',
-              transition:   'transform 0.1s',
-            }}
-          >
-            ▶
-          </button>
-        )}
-
-        {/* EXPLORE: skip button — top right */}
         {isExplore && (
           <button
             type="button"
+            className="btn-kawaii btn-ready"
             onClick={() => dispatch({ type: 'EXPLORE_COMPLETE' })}
-            style={{
-              position:     'absolute',
-              top:          '0.75rem',
-              right:        '0.75rem',
-              padding:      '0.4rem 1rem',
-              fontSize:     '0.85rem',
-              background:   'rgba(255,255,255,0.12)',
-              color:        'var(--ui-text)',
-              border:       '1px solid rgba(255,255,255,0.2)',
-              borderRadius: '2rem',
-              cursor:       'pointer',
-              zIndex:       30,
-              backdropFilter: 'blur(4px)',
-            }}
+            style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', zIndex: 30 }}
           >
-            Ready! →
+            Continue →
           </button>
         )}
 
-        {/* Win overlay */}
         {state.phase === 'WIN' && (
-          <div style={{
-            position:       'absolute',
-            inset:          0,
-            display:        'flex',
-            flexDirection:  'column',
-            alignItems:     'center',
-            justifyContent: 'center',
-            background:     'rgba(13,27,42,0.92)',
-            gap:            '1rem',
-            zIndex:         50,
-          }}>
-            <div style={{ fontSize: '5rem' }}>🎉</div>
-            <p style={{ fontSize: '1.2rem', textAlign: 'center', maxWidth: '400px', margin: 0, fontWeight: 700 }}>
-              {node.text}
-            </p>
+          <div className="win-overlay" data-testid="win-overlay">
+            <div className="win-overlay__emoji" aria-hidden>🎉</div>
+            <p className="win-overlay__text">{node.text}</p>
             <button
+              type="button"
+              className="win-overlay__btn btn-kawaii"
               onClick={() => dispatch({ type: 'PLAY_AGAIN' })}
-              style={{
-                padding:      '0.75rem 2.5rem',
-                fontSize:     '1.1rem',
-                background:   'linear-gradient(135deg, #22c55e, #16a34a)',
-                color:        '#fff',
-                border:       'none',
-                borderRadius: '2rem',
-                cursor:       'pointer',
-                fontWeight:   700,
-                boxShadow:    '0 4px 16px rgba(34,197,94,0.4)',
-              }}
             >
-              Play Again 🪵
+              Play Again
             </button>
           </div>
         )}
+
+        {/* Challenge-1 bonus prompt — visible only while kid is choosing
+            whether to retry with different pieces. The reducer routes
+            BONUS_ACCEPTED back to CHECK_ACTIVE (still on Challenge 1);
+            BONUS_DECLINED skips to Challenge 2. */}
+        <BonusPrompt
+          visible={
+            state.phase === 'CHECK_SUCCESS'
+            && state.dialogueNodeId === 'CHECK_BONUS_PROMPT_C1'
+          }
+          onAccept={()  => dispatch({ type: 'BONUS_ACCEPTED' })}
+          onDecline={() => dispatch({ type: 'BONUS_DECLINED' })}
+        />
       </div>
 
-      {/* ── Dock tray — hidden during DEMO ────────────────────────────── */}
-      {!isDemo && (
-        <div style={{
-          minHeight:  '100px',
-          maxHeight:  '140px',
-          background: 'linear-gradient(180deg, #0a1520 0%, #0d1f30 100%)',
-          borderTop:  '2px solid rgba(59,173,232,0.2)',
-          display:    'flex',
-          alignItems: 'center',
-          padding:    '0.5rem 1rem',
-          gap:        '0.5rem',
-          overflowX:  'auto',
-          overflowY:  'hidden',
-          flexShrink: 0,
-          WebkitOverflowScrolling: 'touch' as any,
-        }}>
-          <span style={{
-            opacity:      0.35,
-            fontSize:     '0.6rem',
-            writingMode:  'vertical-rl' as any,
-            flexShrink:   0,
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase' as any,
-          }}>
-            Logs
-          </span>
+      {dragEnabled && (
+        <div className="dock-tray" data-testid="dock-tray">
+          <span className="dock-tray__label">Logs</span>
 
-          {dockBlocks.map(b => (
-            <div
-              key={b.id}
-              onPointerDown={(e) => handleTrayPointerDown(e, b.id)}
-              style={{
-                cursor:    'grab',
-                flexShrink: 0,
-                opacity:   dragging?.blockId === b.id ? 0.3 : 1,
-                transition: 'opacity 0.1s',
-              }}
-              title={`Drag ${b.numerator}/${b.denominator} log to river`}
-            >
-              <Log block={b} dispatch={dispatch} />
-            </div>
-          ))}
+          {dockBlocks.map(b => {
+            // Same proportional sizing as river-row wrappers — a 1/4 log
+            // on the dock is exactly the same width as a 1/4 in the river.
+            const widthPct = (b.numerator / b.denominator) * 100
+            return (
+              <div
+                key={b.id}
+                className={`dock-tray__item${dragging?.blockId === b.id ? ' dock-tray__item--dragging' : ''}`}
+                onPointerDown={(e) => handleTrayPointerDown(e, b.id)}
+                title={`Drag ${b.numerator}/${b.denominator} log to river`}
+                style={{ flex: `0 0 ${widthPct}%` }}
+              >
+                <Log block={b} dispatch={dispatch} />
+              </div>
+            )
+          })}
 
           {dockBlocks.length === 0 && (
-            <span style={{ opacity: 0.35, fontSize: '0.85rem', color: 'var(--ref-gate)' }}>
-              All logs placed ✓
-            </span>
-          )}
-
-          {buildBlocks.length > 0 && (
-            <button
-              onClick={() => {
-                const lastId =
-                  state.buildZoneLogs[state.buildZoneLogs.length - 1]
-                  ?? buildBlocks[buildBlocks.length - 1]?.id
-                if (lastId) dispatch({ type: 'LOG_RETURNED', blockId: lastId })
-              }}
-              style={{
-                marginLeft:   'auto',
-                padding:      '0.4rem 0.9rem',
-                fontSize:     '0.8rem',
-                background:   'rgba(255,255,255,0.07)',
-                color:        'var(--ui-text)',
-                border:       '1px solid rgba(255,255,255,0.15)',
-                borderRadius: '0.5rem',
-                cursor:       'pointer',
-                flexShrink:   0,
-              }}
-            >
-              ← Undo
-            </button>
+            <span className="river-row__hint">All logs placed ✓</span>
           )}
         </div>
+      )}
+
+      {/* Undo button — top-left, just under the "Bucky's River Gate"
+          title. Off the dock-tray so it doesn't compete with log space,
+          and visually paired with the title (both top-left). */}
+      {!isDemo && buildBlocks.length > 0 && (
+        <button
+          type="button"
+          className="btn-kawaii btn-undo btn-undo--corner"
+          onClick={() => {
+            const lastId =
+              state.buildZoneLogs[state.buildZoneLogs.length - 1]
+              ?? buildBlocks[buildBlocks.length - 1]?.id
+            if (lastId) dispatch({ type: 'LOG_RETURNED', blockId: lastId })
+          }}
+        >
+          ← Undo
+        </button>
       )}
 
       {/* ── Drag ghost ─────────────────────────────────────────────────── */}
-      {/* Rendered fixed so it escapes all overflow and scale transforms.  */}
-      {dragging?.moved && draggedBlock && (
-        <div style={{
-          position:     'fixed',
-          left:         dragging.x - draggedBlock.pixelWidth / 2,
-          top:          dragging.y - 36,
-          pointerEvents: 'none',
-          zIndex:        200,
-          opacity:       0.85,
-          transform:     'scale(1.08)',
-          filter:        'drop-shadow(0 4px 12px rgba(0,0,0,0.5))',
-        }}>
-          <Log block={draggedBlock} dispatch={() => {}} />
-        </div>
-      )}
+      {/* Rendered fixed so it escapes all overflow and scale transforms.
+          Size matches the river-row's current pixel width × the log's
+          fraction, so the ghost is identical to the placed-log size at
+          ANY viewport. Earlier we used block.pixelWidth (a fixed value
+          baked in at block creation from RIVER_WIDTH_PX=960), which made
+          the ghost too big on narrow viewports and too small on wide
+          ones — the visual size jumped when grabbed and again when
+          dropped. */}
+      {dragging?.moved && draggedBlock && (() => {
+        const rowWidthPx = riverRowRef.current?.clientWidth ?? RIVER_WIDTH_PX
+        const ghostWidthPx = rowWidthPx * (draggedBlock.numerator / draggedBlock.denominator)
+        return (
+          <div style={{
+            position:      'fixed',
+            left:          dragging.x - ghostWidthPx / 2,
+            top:           dragging.y - 36,
+            width:         ghostWidthPx,
+            pointerEvents: 'none',
+            zIndex:        200,
+            opacity:       0.85,
+            transform:     'scale(1.08)',
+            filter:        'drop-shadow(0 4px 12px rgba(0,0,0,0.5))',
+          }}>
+            <Log block={draggedBlock} dispatch={() => {}} />
+          </div>
+        )
+      })()}
     </div>
   )
 }

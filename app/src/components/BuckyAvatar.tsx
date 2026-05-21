@@ -5,13 +5,16 @@ import { BuckyBeaverArt } from './BuckyBeaverArt'
 export interface BuckyAvatarProps {
   buckyState: BuckyState
   className?: string
-  /** Diameter of the avatar circle in px. Defaults to 72. */
+  /** Portrait width in px. Height scales to match SVG aspect (160:180). */
   size?: number
 }
 
-export function BuckyAvatar({ buckyState, className, size = 72 }: BuckyAvatarProps) {
+const PORTRAIT_ASPECT = 180 / 160
+
+export function BuckyAvatar({ buckyState, className, size = 160 }: BuckyAvatarProps) {
   const stateClass = buckyStateClass(buckyState)
   const classes = ['bucky-avatar', stateClass, className].filter(Boolean).join(' ')
+  const height = Math.round(size * PORTRAIT_ASPECT)
 
   return (
     <div
@@ -20,13 +23,7 @@ export function BuckyAvatar({ buckyState, className, size = 72 }: BuckyAvatarPro
       data-testid="bucky-avatar"
       role="img"
       aria-label={`Bucky the Builder, ${buckyState}`}
-      style={{
-        width:        size,
-        height:       size,
-        borderRadius: '50%',
-        flexShrink:   0,
-        overflow:     'visible',
-      }}
+      style={{ width: size, height, flexShrink: 0 }}
     >
       <BuckyBeaverArt state={buckyState} />
     </div>

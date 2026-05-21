@@ -41,55 +41,88 @@ export const DIALOGUE: Record<string, DialogueNode> = {
     text:          "Watch what happens when I chop it right down the middle!",
     buckyState:    'chop-swing',
     tapToContinue: true,
+    showChopLine:  true,
   },
 
   DEMO_SHOW_HALVES: {
     text:          "Two equal halves! Each one covers exactly half the river. Two halves still fill the whole thing.",
     buckyState:    'excited',
     tapToContinue: true,
+    equation:      '1/2 + 1/2 = 1 whole',
+    flashEquation: true,
   },
 
   DEMO_CHOP_2: {
     text:          "Now let me chop this left half in two...",
     buckyState:    'chop-swing',
     tapToContinue: true,
+    showChopLine:  true,
   },
 
   DEMO_SHOW_FIRST_QUARTERS: {
-    text:          "Two little quarter-logs! See how two quarters sit right where the half log was? Two quarters equal one half.",
-    buckyState:    'excited',
-    tapToContinue: true,
+    text:                   "Two little quarter-logs! See how two quarters sit right where the half log was? Two quarters equal one half.",
+    buckyState:             'excited',
+    tapToContinue:          true,
+    equation:               '1/4 + 1/4 = 1/2',
+    flashEquation:          true,
+    highlightFirstQuarters: true,
   },
 
   DEMO_CHOP_3: {
     text:          "Let me do the same to the right half...",
     buckyState:    'chop-swing',
     tapToContinue: true,
+    showChopLine:  true,
   },
 
   DEMO_SHOW_ALL_QUARTERS: {
-    text:          "Four quarters — and look! They fill the whole river, just like the big log did. Four quarters equal one whole!",
-    buckyState:    'celebrating',
-    tapToContinue: true,
+    text:                 "Four quarters — and look! They fill the whole river, just like the big log did. Four quarters equal one whole!",
+    buckyState:           'celebrating',
+    tapToContinue:        true,
+    equation:             '1/4 + 1/4 + 1/4 + 1/4 = 1 whole',
+    flashEquation:        true,
+    highlightAllQuarters: true,
   },
 
-  DEMO_EQUATION: {
-    text:          "So: 2 halves = 1 whole. 2 quarters = 1 half. 4 quarters = 1 whole. Same river, different pieces!",
-    buckyState:    'excited',
-    tapToContinue: true,
-  },
-
-  DEMO_HANDOFF: {
-    text:          "Now YOU try! Drag the whole log into the river and see what you can do with it.",
-    buckyState:    'encouraging',
-    tapToContinue: true,
+  // Two-beat recap. Each beat is tap-to-continue so the kid sets the
+  // pace — the recap visuals (glow + slam-in equation) deserve more than
+  // the ~1.5s the typewriter takes, and an auto-timed hold felt rushed.
+  // The old single-beat DEMO_EQUATION (just a pink "1/2 = 2/4" badge
+  // with no glow) and the redundant DEMO_HANDOFF ("Now YOU try!" with
+  // an empty dock) have both been retired — REVIEW_WHOLE's
+  // DIALOGUE_ADVANCE handles the phase transition into EXPLORE directly.
+  DEMO_REVIEW_HALF: {
+    // "Same space" pre-teaches equivalence in kid-friendly terms before
+    // INSTRUCT_NAME_EQUIVALENCE formally introduces the word "equivalent."
+    // "Space" reads cleaner than "size" once the reference log sits IN
+    // the row's empty half — the kid sees two pieces side-by-side
+    // taking the same amount of river-space.
+    text:           "Look — two quarters take up the SAME SPACE as one half. Different pieces, same space!",
+    buckyState:     'excited',
+    tapToContinue:  true,
+    // Build-up form: shows the addition of two quarters AND the
+    // equivalence to one half in one chain. Below the row, flashing.
+    equation:       '1/4 + 1/4 = 2/4 = 1/2',
+    flashEquation:  true,
+    // Faded 1/2 reference log moves into the row's empty right half —
+    // side-by-side comparison: two real 1/4s on the left, one faded
+    // 1/2 silhouette on the right. The "same space" claim becomes
+    // spatially obvious without any extra frames.
+    referenceLog:   {
+      fraction: { numerator: 1, denominator: 2 },
+      position: 'inline-right',
+    },
+    // Hide the two un-involved 1/4s on the right; the reference 1/2
+    // takes their place. Trim derives its target from the reference
+    // position now, so no highlight flag is needed.
+    trimToHighlight: true,
   },
 
   // ── EXPLORE ──────────────────────────────────────────────────────────────
 
   // EXPLORE nodes: tapToContinue is intentionally absent — DIALOGUE_ADVANCE is
   // not handled in the EXPLORE reducer phase. Free play guidance comes from
-  // ambient Bucky text only; the "Ready! →" button in the header exits EXPLORE.
+  // ambient Bucky text only; the "Continue →" button in the header exits EXPLORE.
 
   EXPLORE_INTRO: {
     text:       "Now YOU try! Drag that whole log into the river. Then double-tap it to chop — see how many pieces you can make!",
@@ -148,10 +181,15 @@ export const DIALOGUE: Record<string, DialogueNode> = {
   },
 
   INSTRUCT_NAME_EQUIVALENCE: {
-    text:       "Two-quarters and one-half are EQUIVALENT — they look different but fill the SAME space. Remember that word: equivalent!",
+    // "same space" (lowercase) matches the phrase verbatim from
+    // DEMO_REVIEW_HALF — the kid hears the same words from earlier and
+    // recognizes the callback. The new word "EQUIVALENT" lands on a
+    // familiar phrase rather than being parachuted in fresh.
+    text:       "Two-quarters and one-half are EQUIVALENT — they look different but take up the same space. Remember that word: equivalent!",
     buckyState: 'celebrating',
     tapToContinue: true,
     nextNode:   'CHECK_INTRO',
+    equation:   '1/2 = 2/4',
   },
 
   // ── INSTRUCT errors ───────────────────────────────────────────────────────
@@ -212,16 +250,51 @@ export const DIALOGUE: Record<string, DialogueNode> = {
   },
 
   CHECK_CORRECT_C1: {
-    text:       "Brilliant! One half log or two quarter logs — same river space! Different pieces, same width.",
+    // "same space" matches the phrase from DEMO_REVIEW_HALF and
+    // INSTRUCT_NAME_EQUIVALENCE — third callback so the equivalence
+    // vocabulary reinforces across the three pedagogical layers.
+    text:       "Brilliant! One half log or two quarter logs — same space, different pieces!",
+    buckyState: 'celebrating',
+    autoAdvance: true,
+    // Lands on the bonus prompt instead of advancing straight to C2 —
+    // gives the kid a chance to PHYSICALLY construct the equivalence
+    // by filling the same gate with the OTHER set of pieces.
+    nextNode:   'CHECK_BONUS_PROMPT_C1',
+  },
+
+  // Bonus flow for Challenge 1 — the equivalence-defining beat. The
+  // prompt invites the kid to fill the SAME gate with a different
+  // combination of pieces. If they take the bait, the second solve
+  // routes to CHECK_BONUS_SUCCESS_C1 (the pedagogical payoff). If
+  // they skip, the lesson advances to Challenge 2 with no penalty.
+  CHECK_BONUS_PROMPT_C1: {
+    text:       "Nice job! Can you fill this same gap a DIFFERENT way?",
+    buckyState: 'thinking',
+    // No autoAdvance, no tapToContinue — the [Try it!] / [Skip →]
+    // buttons in LessonScreen drive the transition via BONUS_ACCEPTED
+    // / BONUS_DECLINED events.
+  },
+
+  CHECK_BONUS_SUCCESS_C1: {
+    // The pedagogical payoff: kid built the same gate two different
+    // ways. Names the concept ("EQUIVALENT") explicitly while the
+    // experience is fresh in their hands.
+    text:       "AMAZING! You filled the same gap two different ways — that's what EQUIVALENT means! Same space, different pieces.",
     buckyState: 'celebrating',
     autoAdvance: true,
     nextNode:   'CHECK_CHALLENGE_START',
+    equation:   '1/2 = 2/4',
   },
 
   CHECK_CORRECT_C2: {
     text:       "Three-quarters with three small logs — or half plus a quarter! Either way works! You're thinking like an engineer!",
     buckyState: 'celebrating',
     triggerBadge: true,
+    // Matches the 3/4 challenge AND the "half plus a quarter" narration.
+    // (Previously hardcoded to "1/2 = 2/4" — a leftover from the badge
+    // being a single global string, which made the kid see "= 2/4" right
+    // after correctly building 3/4 and think the system disagreed.)
+    equation:   '1/2 + 1/4 = 3/4',
     autoAdvance: true,
     nextNode:   'WIN_SEQUENCE',
   },

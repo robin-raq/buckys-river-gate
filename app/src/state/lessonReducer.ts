@@ -31,13 +31,45 @@ function splitBlock(blocks: BlockState[], blockId: string): BlockState[] {
     slot:        target.slot,
     splittable,
     selected:    false,
-    locked:      false,
+    // Inherit lock state — DEMO blocks are locked (Bucky narrates, no user
+    // interaction); user-placed blocks are unlocked (kid can re-chop).
+    locked:      target.locked,
   }
-  const childB: BlockState = { ...childA, id: `${blockId}-b`, slot: null, zone: 'dock' }
+  // BOTH children inherit the parent's zone — chopping a log in the river
+  // produces two pieces in the river (so the kid sees "1/1 → 1/2 + 1/2"
+  // happen in place). Earlier this forced childB to 'dock', which made
+  // the second half disappear from the river visually.
+  const childB: BlockState = { ...childA, id: `${blockId}-b` }
 
-  return blocks
-    .filter(b => b.id !== blockId)
-    .concat([childA, childB])
+  // Splice the children into the parent's slot so the visual left→right
+  // order is preserved. LessonScreen renders `blocks.filter(zone==='build')`
+  // in array order via flex, so appending children to the end would push
+  // un-split siblings into earlier visual positions — chopping the LEFT
+  // half would visually appear as the RIGHT side splitting.
+  const idx = blocks.findIndex(b => b.id === blockId)
+  return [
+    ...blocks.slice(0, idx),
+    childA,
+    childB,
+    ...blocks.slice(idx + 1),
+  ]
+}
+
+/** When a block in the river is chopped, the buildZoneLogs array (which
+ *  tracks order of placed pieces) needs both new child IDs in the same
+ *  slot the parent occupied — otherwise CHECK validation undercounts. */
+function chopBuildZoneLogs(
+  buildZoneLogs: string[],
+  parentId: string,
+): string[] {
+  const idx = buildZoneLogs.indexOf(parentId)
+  if (idx === -1) return buildZoneLogs
+  return [
+    ...buildZoneLogs.slice(0, idx),
+    `${parentId}-a`,
+    `${parentId}-b`,
+    ...buildZoneLogs.slice(idx + 1),
+  ]
 }
 
 function snapBlock(blocks: BlockState[], blockId: string, slot: number): BlockState[] {
@@ -119,7 +151,60 @@ function appendLog(state: LessonState, event: string, correct: boolean): LessonS
 
 // ── Main reducer ───────────────────────────────────────────────────────────
 
+/**
+ * Advance from CHECK_SUCCESS to the next challenge — loads its inventory,
+ * resets attempt counters, and lands on CHECK_CHALLENGE_START. Shared
+ * between the default DIALOGUE_ADVANCE path and the BONUS_DECLINED path.
+ */
+function advanceToNextChallenge(state: LessonState): LessonState {
+  const nextIndex = state.challengeIndex + 1
+  const nextChallenge = CHECK_CHALLENGES[nextIndex]
+  return {
+    ...state,
+    phase:          'CHECK_ACTIVE',
+    challengeIndex: nextIndex,
+    referenceGate:  nextChallenge.referenceGate,
+    blocks:         makeChallengeBlocks(nextIndex),
+    buildZoneLogs:  [],
+    attemptCount:   0,
+    dialogueNodeId: 'CHECK_CHALLENGE_START',
+  }
+}
+
+/**
+ * Strip the `history` field from a snapshot so the history stack never
+ * recurses into itself (which would blow up state size geometrically).
+ */
+function snapshotOf(state: LessonState): import('./types').HistorySnapshot {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { history: _h, ...rest } = state
+  return rest
+}
+
 export function lessonReducer(state: LessonState, event: LessonEvent): LessonState {
+  // History-rewind is handled at the outermost layer so individual phase
+  // cases never need to know about it. Pops the most recent snapshot and
+  // restores it, preserving the rest of the (now-shorter) history stack.
+  if (event.type === 'DIALOGUE_REWIND') {
+    if (state.history.length === 0) return state
+    const prev = state.history[state.history.length - 1]
+    return { ...prev, history: state.history.slice(0, -1) }
+  }
+
+  const next = innerReducer(state, event)
+
+  // History-push: only when DIALOGUE_ADVANCE actually moved us. Wrapping
+  // ADVANCE here keeps the inner reducer free of history bookkeeping.
+  if (event.type === 'DIALOGUE_ADVANCE' && next !== state) {
+    return {
+      ...next,
+      history: [...state.history, snapshotOf(state)],
+    }
+  }
+  return next
+}
+
+function innerReducer(state: LessonState, event: LessonEvent): LessonState {
   switch (state.phase) {
 
     // ────────────────────────────────────────────────────────────────────
@@ -146,9 +231,14 @@ export function lessonReducer(state: LessonState, event: LessonEvent): LessonSta
       if (event.type !== 'DIALOGUE_ADVANCE') return state
 
       const W = RIVER_WIDTH_PX
+      // splittable mirrors splitBlock's own rule: denominator < 4 means
+      // it can still be chopped (whole → halves; halves → quarters; but
+      // quarters are the smallest piece, not chop-able further). DEMO
+      // blocks need splittable=true so the reducer's DEMO_CHOP_N cases
+      // can call splitBlock and produce `-a` / `-b` child IDs.
       const lockedBlock = (n: number, d: number, slot: number) =>
         makeBlock({ numerator: n, denominator: d, pixelWidth: Math.round((n / d) * W),
-                    zone: 'build', slot, splittable: false, selected: false, locked: true })
+                    zone: 'build', slot, splittable: d < 4, selected: false, locked: true })
 
       switch (state.dialogueNodeId) {
 
@@ -161,41 +251,59 @@ export function lessonReducer(state: LessonState, event: LessonEvent): LessonSta
           return { ...state, dialogueNodeId: 'DEMO_CHOP_1' }
 
         case 'DEMO_CHOP_1': {
-          // Split whole → two halves
-          const halfA = lockedBlock(1, 2, 0)
-          const halfB = lockedBlock(1, 2, 1)
-          return { ...state, dialogueNodeId: 'DEMO_SHOW_HALVES', blocks: [halfA, halfB] }
+          // Split the whole log via splitBlock so the resulting children
+          // get `<id>-a` / `<id>-b` suffixes — the axe-swing animation
+          // detector keys off these IDs, so the chop visual fires here too.
+          const whole = state.blocks.find(b => b.denominator === 1)!
+          return {
+            ...state,
+            dialogueNodeId: 'DEMO_SHOW_HALVES',
+            blocks: splitBlock(state.blocks, whole.id),
+          }
         }
 
         case 'DEMO_SHOW_HALVES':
           return { ...state, dialogueNodeId: 'DEMO_CHOP_2' }
 
         case 'DEMO_CHOP_2': {
-          // Split left half → 2 quarters; keep right half
-          const rightHalf = state.blocks.find(b => b.denominator === 2)!
-          const qA = lockedBlock(1, 4, 0)
-          const qB = lockedBlock(1, 4, 1)
-          return { ...state, dialogueNodeId: 'DEMO_SHOW_FIRST_QUARTERS', blocks: [qA, qB, rightHalf] }
+          // Split the LEFT half → 2 quarters; right half stays. splitBlock
+          // filters the parent and concats the two children — the right
+          // half is preserved untouched.
+          const halves = state.blocks.filter(b => b.denominator === 2)
+          const leftHalf = halves[0]!
+          return {
+            ...state,
+            dialogueNodeId: 'DEMO_SHOW_FIRST_QUARTERS',
+            blocks: splitBlock(state.blocks, leftHalf.id),
+          }
         }
 
         case 'DEMO_SHOW_FIRST_QUARTERS':
           return { ...state, dialogueNodeId: 'DEMO_CHOP_3' }
 
         case 'DEMO_CHOP_3': {
-          // Split right half → 2 more quarters → 4 quarters total
-          const qC = lockedBlock(1, 4, 2)
-          const qD = lockedBlock(1, 4, 3)
-          const existing = state.blocks.filter(b => b.denominator === 4)
-          return { ...state, dialogueNodeId: 'DEMO_SHOW_ALL_QUARTERS', blocks: [...existing, qC, qD] }
+          // Split the remaining (right) half → 2 quarters. Now 4 quarters
+          // total in the river. splitBlock again gives child IDs with the
+          // `-a` / `-b` suffix that the axe-swing detector recognises.
+          const remainingHalf = state.blocks.find(b => b.denominator === 2)
+          if (!remainingHalf) return state
+          return {
+            ...state,
+            dialogueNodeId: 'DEMO_SHOW_ALL_QUARTERS',
+            blocks: splitBlock(state.blocks, remainingHalf.id),
+          }
         }
 
         case 'DEMO_SHOW_ALL_QUARTERS':
-          return { ...state, dialogueNodeId: 'DEMO_EQUATION' }
+          return { ...state, dialogueNodeId: 'DEMO_REVIEW_HALF' }
 
-        case 'DEMO_EQUATION':
-          return { ...state, dialogueNodeId: 'DEMO_HANDOFF' }
-
-        case 'DEMO_HANDOFF':
+        // Recap beat — "two quarters fit where one half was" with the
+        // side-by-side reference proof. This is now the FINAL DEMO node:
+        // its DIALOGUE_ADVANCE flips the phase to EXPLORE, swaps in the
+        // dock whole-log inventory, and stamps exploreStartTime. Earlier
+        // a second recap (DEMO_REVIEW_WHOLE) sat between this beat and
+        // EXPLORE — it was cut as redundant with DEMO_SHOW_ALL_QUARTERS.
+        case 'DEMO_REVIEW_HALF':
           return {
             ...state,
             phase:            'EXPLORE',
@@ -226,7 +334,12 @@ export function lessonReducer(state: LessonState, event: LessonEvent): LessonSta
         case 'CHOP': {
           const newBlocks = splitBlock(state.blocks, event.blockId)
           const didChop   = newBlocks !== state.blocks
-          return { ...state, blocks: newBlocks, chopCount: didChop ? state.chopCount + 1 : state.chopCount }
+          return {
+            ...state,
+            blocks:        newBlocks,
+            buildZoneLogs: didChop ? chopBuildZoneLogs(state.buildZoneLogs, event.blockId) : state.buildZoneLogs,
+            chopCount:     didChop ? state.chopCount + 1 : state.chopCount,
+          }
         }
 
         case 'LOG_SNAPPED':
@@ -281,7 +394,12 @@ export function lessonReducer(state: LessonState, event: LessonEvent): LessonSta
         case 'CHOP': {
           const newBlocks = splitBlock(state.blocks, event.blockId)
           const didChop   = newBlocks !== state.blocks
-          return { ...state, blocks: newBlocks, chopCount: didChop ? state.chopCount + 1 : state.chopCount }
+          return {
+            ...state,
+            blocks:        newBlocks,
+            buildZoneLogs: didChop ? chopBuildZoneLogs(state.buildZoneLogs, event.blockId) : state.buildZoneLogs,
+            chopCount:     didChop ? state.chopCount + 1 : state.chopCount,
+          }
         }
 
         case 'CHECK_SUBMIT': {
@@ -415,7 +533,12 @@ export function lessonReducer(state: LessonState, event: LessonEvent): LessonSta
         case 'CHOP': {
           const newBlocks = splitBlock(state.blocks, event.blockId)
           const didChop   = newBlocks !== state.blocks
-          return { ...state, blocks: newBlocks, chopCount: didChop ? state.chopCount + 1 : state.chopCount }
+          return {
+            ...state,
+            blocks:        newBlocks,
+            buildZoneLogs: didChop ? chopBuildZoneLogs(state.buildZoneLogs, event.blockId) : state.buildZoneLogs,
+            chopCount:     didChop ? state.chopCount + 1 : state.chopCount,
+          }
         }
 
         case 'CHECK_SUBMIT': {
@@ -423,6 +546,17 @@ export function lessonReducer(state: LessonState, event: LessonEvent): LessonSta
           const challenge = CHECK_CHALLENGES[state.challengeIndex]
 
           if (isSolutionValid(placed, challenge)) {
+            // Bonus retry: the kid already passed this challenge once
+            // and accepted the "try a different way" prompt. Route to
+            // the bonus-success beat — do NOT double-count the pass.
+            if (state.bonusOffered) {
+              return appendLog({
+                ...state,
+                phase:          'CHECK_SUCCESS',
+                attemptCount:   0,
+                dialogueNodeId: 'CHECK_BONUS_SUCCESS_C1',
+              }, 'check_correct', true)
+            }
             const successNode = `CHECK_CORRECT_C${state.challengeIndex}`
             return appendLog({
               ...state,
@@ -516,8 +650,29 @@ export function lessonReducer(state: LessonState, event: LessonEvent): LessonSta
 
     // ────────────────────────────────────────────────────────────────────
     case 'CHECK_SUCCESS': {
+      // Bonus prompt buttons — kid chooses retry vs skip.
+      if (event.type === 'BONUS_ACCEPTED') {
+        // Reset the build zone to the challenge's starting inventory
+        // so the kid can try a different combination of pieces.
+        // dialogueNodeId stays CHECK_BONUS_PROMPT_C1 so the speech
+        // bubble keeps the "different way?" framing visible while
+        // they build. UI suppresses the buttons during CHECK_ACTIVE.
+        return {
+          ...state,
+          phase:         'CHECK_ACTIVE',
+          blocks:        makeChallengeBlocks(state.challengeIndex),
+          buildZoneLogs: [],
+          attemptCount:  0,
+          bonusOffered:  true,
+        }
+      }
+      if (event.type === 'BONUS_DECLINED') {
+        return advanceToNextChallenge(state)
+      }
+
       if (event.type !== 'DIALOGUE_ADVANCE') return state
 
+      // Win condition takes precedence at any node.
       if (state.challengesPassed >= 3) {
         return {
           ...state,
@@ -526,19 +681,30 @@ export function lessonReducer(state: LessonState, event: LessonEvent): LessonSta
         }
       }
 
-      // Advance to next challenge
-      const nextIndex = state.challengeIndex + 1
-      const nextChallenge = CHECK_CHALLENGES[nextIndex]
-      return {
-        ...state,
-        phase:          'CHECK_ACTIVE',
-        challengeIndex: nextIndex,
-        referenceGate:  nextChallenge.referenceGate,
-        blocks:         makeChallengeBlocks(nextIndex),
-        buildZoneLogs:  [],
-        attemptCount:   0,
-        dialogueNodeId: 'CHECK_CHALLENGE_START',
+      // CHECK_CORRECT_C1 → bonus prompt (only for challenge 1 — the
+      // equivalence-defining beat). Other challenges advance directly
+      // to the next via the default branch below.
+      if (
+        state.dialogueNodeId === 'CHECK_CORRECT_C1'
+        && state.challengeIndex === 1
+      ) {
+        return { ...state, dialogueNodeId: 'CHECK_BONUS_PROMPT_C1' }
       }
+
+      // CHECK_BONUS_PROMPT_C1 — buttons drive transitions; ignore
+      // any stray DIALOGUE_ADVANCE that might fire here.
+      if (state.dialogueNodeId === 'CHECK_BONUS_PROMPT_C1') {
+        return state
+      }
+
+      // CHECK_BONUS_SUCCESS_C1 auto-advances to the next challenge
+      // and resets the bonusOffered flag.
+      if (state.dialogueNodeId === 'CHECK_BONUS_SUCCESS_C1') {
+        return { ...advanceToNextChallenge(state), bonusOffered: false }
+      }
+
+      // Default: any other CHECK_CORRECT_C* node advances to next challenge.
+      return advanceToNextChallenge(state)
     }
 
     // ────────────────────────────────────────────────────────────────────

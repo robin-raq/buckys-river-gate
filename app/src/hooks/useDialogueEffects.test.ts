@@ -9,14 +9,22 @@ const baseNode: DialogueNode = {
 }
 
 describe('useDialogueEffects', () => {
-  it('returns all false when node flags are absent', () => {
+  it('returns all defaults when node flags are absent', () => {
     const { result } = renderHook(() => useDialogueEffects(baseNode))
     expect(result.current).toEqual({
-      highlightGap:       false,
-      highlightOverflow:    false,
-      showGhostOverlay:     false,
-      triggerBadge:         false,
-      triggerWin:           false,
+      highlightGap:           false,
+      highlightOverflow:      false,
+      showGhostOverlay:       false,
+      triggerBadge:           false,
+      triggerWin:             false,
+      equation:               undefined,
+      highlightFirstQuarters: false,
+      highlightAllQuarters:   false,
+      showChopLine:           false,
+      flashEquation:          false,
+      referenceLog:           null,
+      equationAbove:          false,
+      trimToHighlight:        false,
     })
   })
 
@@ -30,13 +38,11 @@ describe('useDialogueEffects', () => {
       triggerWin:         true,
     }
     const { result } = renderHook(() => useDialogueEffects(node))
-    expect(result.current).toEqual({
-      highlightGap:       true,
-      highlightOverflow:  true,
-      showGhostOverlay:   true,
-      triggerBadge:       true,
-      triggerWin:         true,
-    })
+    expect(result.current.highlightGap).toBe(true)
+    expect(result.current.highlightOverflow).toBe(true)
+    expect(result.current.showGhostOverlay).toBe(true)
+    expect(result.current.triggerBadge).toBe(true)
+    expect(result.current.triggerWin).toBe(true)
   })
 
   it('treats undefined flags as false', () => {
@@ -50,5 +56,17 @@ describe('useDialogueEffects', () => {
     expect(result.current.showGhostOverlay).toBe(false)
     expect(result.current.triggerBadge).toBe(false)
     expect(result.current.triggerWin).toBe(false)
+  })
+
+  it('surfaces DEMO-recap fields when present', () => {
+    const node: DialogueNode = {
+      ...baseNode,
+      equation:               '1/2 = 2/4',
+      highlightFirstQuarters: true,
+    }
+    const { result } = renderHook(() => useDialogueEffects(node))
+    expect(result.current.equation).toBe('1/2 = 2/4')
+    expect(result.current.highlightFirstQuarters).toBe(true)
+    expect(result.current.highlightAllQuarters).toBe(false)
   })
 })
