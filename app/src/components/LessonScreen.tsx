@@ -10,7 +10,6 @@ import { PhaseDots }            from './PhaseDots'
 import { SpeechBubble }         from './SpeechBubble'
 import { ReferenceGate }        from './ReferenceGate'
 import { SnapGuides }           from './SnapGuides'
-import { GoalSidebar }          from './GoalSidebar'
 import { CheckButton }          from './CheckButton'
 import { ChallengeCounter }     from './ChallengeCounter'
 import { Log }                  from './Log'
@@ -54,11 +53,6 @@ const GATE_VISIBLE_PHASES = new Set([
 // How long the EXPLORE free-play phase lasts before auto-advancing (ms)
 const EXPLORE_TIMEOUT_MS = 30_000
 
-const GOAL_SIDEBAR_PHASES = new Set([
-  'INSTRUCT_INTRO', 'INSTRUCT_BUILD', 'INSTRUCT_ERROR', 'INSTRUCT_SUCCESS',
-  'CHECK_INTRO', 'CHECK_ACTIVE', 'CHECK_ERROR_1', 'CHECK_ERROR_2', 'CHECK_SUCCESS',
-])
-
 
 export function LessonScreen({ state, dispatch }: Props) {
   const node          = getNode(state.dialogueNodeId)
@@ -77,7 +71,6 @@ export function LessonScreen({ state, dispatch }: Props) {
   const dragEnabled   = isBuildActive || isExplore
 
   const gateVisible   = GATE_VISIBLE_PHASES.has(state.phase)
-  const goalVisible   = GOAL_SIDEBAR_PHASES.has(state.phase)
   const canSubmit     = state.buildZoneLogs.length > 0
   const lessonPhase   = phaseToLessonPhase(state.phase)
   const { numerator: gn, denominator: gd } = state.referenceGate
@@ -380,11 +373,10 @@ export function LessonScreen({ state, dispatch }: Props) {
           )}
         </div>
 
-        {/* Goal sidebar removed: the cyan reference gate already shows the
-            target spatially (its width = the fraction the kid must fill).
-            Adding a text label was a 4th attention magnet competing with
-            speech bubble, gate, and dock. Less is more. */}
-        <GoalSidebar visible={false} gateLabel={gateLabel} gate={state.referenceGate} />
+        {/* Goal sidebar removed entirely (it was rendered visible={false}
+            after design feedback). The cyan reference gate communicates
+            the target spatially — a separate "GOAL: 1/2" panel was a 4th
+            attention magnet competing with speech bubble, gate, and dock. */}
         {/* key={equationText} forces a remount when the equation switches
             from "1/2 = 2/4" to "1/1 = 4/4" so the slam-in animation fires
             on each new equation — CSS animations don't re-trigger on

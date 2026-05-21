@@ -52,19 +52,18 @@ describe('LessonScreen visual integration', () => {
     expect(screen.getByTestId('equivalence-badge')).toHaveTextContent('1/2 = 2/4')
   })
 
-  it('hides the standalone goal sidebar (cyan gate communicates the target)', () => {
+  it('does NOT render a standalone goal sidebar (cyan gate communicates the target)', () => {
     // Design decision: the cyan reference gate's WIDTH already shows the
-    // fraction the kid must fill. A separate "GOAL: 1/2" sign was a 4th
+    // fraction the kid must fill. A separate "GOAL: 1/2" panel was a 4th
     // attention magnet competing with the speech bubble, gate, and dock.
-    // We removed it for visual focus. The element stays in the DOM for
-    // hidden state but is not visible to the user.
+    // The GoalSidebar component was removed entirely from the render tree.
     render(
       <LessonScreen
         state={makeLessonState({ phase: 'INSTRUCT_BUILD', dialogueNodeId: 'INSTRUCT_BUILD_PROMPT' })}
         dispatch={noop}
       />,
     )
-    expect(screen.getByTestId('goal-sidebar')).not.toBeVisible()
+    expect(screen.queryByTestId('goal-sidebar')).toBeNull()
     expect(screen.getByTestId('reference-gate')).toBeVisible()
   })
 
